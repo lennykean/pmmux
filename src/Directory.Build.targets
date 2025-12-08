@@ -1,0 +1,15 @@
+<Project>
+  <ItemGroup>
+    <ExternLinks Include="..\..\doc-links\*.links" Exclude="..\..\doc-links\$(MSBuildProjectName).links" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <DefaultDocumentationFileNameFactory>DirectoryName</DefaultDocumentationFileNameFactory>
+    <DefaultDocumentationFolder>docs\</DefaultDocumentationFolder>
+    <DefaultDocumentationGeneratedPages>Assembly,Namespaces,Types,Members</DefaultDocumentationGeneratedPages>
+    <DefaultDocumentationGeneratedAccessModifiers>Public</DefaultDocumentationGeneratedAccessModifiers>
+    <DefaultDocumentationLinksBaseUrl>..\..\$(MSBuildProjectName)\docs\</DefaultDocumentationLinksBaseUrl>
+    <DefaultDocumentationLinksOutputFile>..\..\doc-links\$(MSBuildProjectName).links</DefaultDocumentationLinksOutputFile>
+    <DefaultDocumentationExternLinksFiles>@(ExternLinks, '|')</DefaultDocumentationExternLinksFiles>
+  </PropertyGroup>
+</Project>

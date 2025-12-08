@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Target Name="ILRepacker" AfterTargets="Publish">
+    <ItemGroup>
+      <InputAssemblies Include="$(OutputPath)$(AssemblyName).dll" />
+      <InputAssemblies Include="$(OutputPath)Microsoft.AspNetCore.OpenApi.dll" />
+      <InputAssemblies Include="$(OutputPath)Microsoft.OpenApi.dll" />
+      <InputAssemblies Include="$(OutputPath)Pmmux.Extensions.Management.Abstractions.dll" />
+    </ItemGroup>
+    <ILRepack
+      Internalize="true"
+      InputAssemblies="@(InputAssemblies)"
+      InternalizeExclude="@(AssemblyName)"
+      LibraryPath="$(OutputPath)"
+      DebugInfo="true"
+      TargetKind="Dll"
+      OutputFile="$(PublishDir)\$(AssemblyName).dll" />
+  </Target>
+</Project>
