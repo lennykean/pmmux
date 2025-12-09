@@ -1,14 +1,17 @@
 # pmmux
 
-**pmmux** (Port Map Multiplexer) is an extensible multi-protocol network load balancer with built-in NAT port forwarding via UPnP/PMP. Incoming TCP/UDP traffic is routed to backend services based on protocol detection, content inspection, and configurable rules.
+**pmmux** (Port Map Multiplexer) is a lightweight, high-performance port multiplexer with protocol-aware routing and automatic NAT port forwarding.
+
+Multiple applications and protocols are multiplexed through the same network port using content inspection with configurable rules and extendable protocol support. Built-in UPnP/PMP mapping automatically configures NAT port forwarding to allow external access to services.
 
 ## Features
 
-- **Extensible Protocol Detection** - Route traffic based on content inspection via pluggable extensions (TLS/SNI, HTTP headers, custom protocols)
-- **Health Monitoring** - Automatic health checks with configurable thresholds
-- **Multiple Routing Strategies** - First-available, least-requests, or custom strategies
-- **Plugin Architecture** - Extend with custom backends, protocols, and routing logic
-- **Observability** - Metrics export via OpenTelemetry
+- **Automatic NAT Forwarding** - UPnP/PMP discovery and configuration allows routing external traffic to specific services
+- **Protocol Detection** - Content-based routing and protocol negotiation
+- **Health Monitoring** - Configurable health checks with failure thresholds and backend priorities
+- **Routing Strategies** - Fine-grained control over traffic routing and load balancing
+- **Observability** - Built-in instrumentation
+- **Extensibility** - Custom routing, protocol handling, metric exporters, and more via plugins
 
 ## Quick Start
 
@@ -20,7 +23,18 @@ pmmux -b web:pass:ip=127.0.0.1,port=3000 -p 8080:8080:tcp
 
 The `-p 8080:8080:tcp` option binds port 8080 locally and attempts to configure NAT port mapping via UPnP/PMP, making the service accessible from external networks.
 
-With multiple backends and health checks:
+Using extensions, HTTP and BitTorrent traffic can share a single port:
+
+```sh
+pmmux \
+  -x Pmmux.Extensions.Http.dll \
+  -x Pmmux.Extensions.BitTorrent.dll \
+  -b "web:http-proxy:proxy.address=http://127.0.0.1:3000" \
+  -b "torrent:bittorrent-pass:ip=127.0.0.1,port=6881" \
+  -p 8080:8080:tcp
+```
+
+Health checks monitor backend availability and route traffic only to healthy services:
 
 ```sh
 pmmux \
@@ -32,7 +46,7 @@ pmmux \
 
 ### Configuration File
 
-pmmux can load configuration from a file (`pmmux.toml` by default), supporting TOML, JSON, and YAML.
+Configuration can also be loaded from a file (`pmmux.toml` by default) in TOML, JSON, or YAML format.
 
 ```toml
 [pmmux]
@@ -58,12 +72,7 @@ See the [Configuration Guide](docs/configuration.md) for complete documentation.
 
 ## Extensibility
 
-pmmux uses a plugin architecture to allow custom extensions:
-- Backend protocols (perform protocol detection and handle traffic)
-- Routing strategies (customize how backends are selected)
-- Connection negotiators (transport-level protocol negotiation like encryption or packet filtering)
-
-See the [Extensibility Guide](docs/extensibility.md) for extension points and the [API Reference](docs/api-reference.md) for full interface documentation.
+The plugin architecture allows extending pmmux with custom backend protocols, routing strategies, and connection negotiators. See the [Extensibility Guide](docs/extensibility.md) for extension points and the [API Reference](docs/api-reference.md) for interface documentation.
 
 ## Built-in Backend Protocols
 
@@ -84,7 +93,7 @@ Extension | Description | Documentation
 
 ## Service Installation
 
-pmmux can be installed as a system service on Linux and Windows platforms:
+pmmux can run as a system service on Linux (systemd) and Windows:
 
 ```sh
 # Install
@@ -99,7 +108,7 @@ pmmux uninstall
 - [Architecture Guide](docs/architecture.md) - System architecture, component design, and data flow
 - [Configuration Guide](docs/configuration.md) - Configuration reference
 - [Extensibility Guide](docs/extensibility.md) - Extension points and plugin development
-- [API Reference](docs/api-reference.md) - API documentation
+- [API Reference](docs/api-reference.md) - Interface and type documentation
 
 ## License
 
