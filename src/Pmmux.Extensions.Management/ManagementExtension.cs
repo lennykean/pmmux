@@ -59,6 +59,7 @@ public sealed class ManagementExtension : IExtension
         services.AddSingleton<IManagementEndpointGroup, HealthCheckEndpointGroup>();
         services.AddSingleton<IManagementEndpointGroup, BackendsEndpointGroup>();
         services.AddSingleton<IManagementEndpointGroup, PortmapEndpointGroup>();
+        services.AddSingleton<IManagementEndpointGroup, ListenersEndpointGroup>();
 
         services.AddHostedService<ManagementServer>();
     }

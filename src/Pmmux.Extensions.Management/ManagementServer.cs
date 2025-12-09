@@ -1,11 +1,13 @@
 using System.Collections.Generic;
 using System.Net;
+using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -50,7 +52,9 @@ internal partial class ManagementServer(
         builder.Services.ConfigureHttpJsonOptions(options =>
         {
             options.SerializerOptions.PropertyNameCaseInsensitive = true;
+            options.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
             options.SerializerOptions.TypeInfoResolver = new DefaultJsonTypeInfoResolver();
+            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
         });
 
         var app = builder.Build();
@@ -58,6 +62,8 @@ internal partial class ManagementServer(
         app.MapOpenApi();
 
         var apiGroup = app.MapGroup("api");
+
+        apiGroup.MapGet("/healthz", () => Results.Ok());
 
         foreach (var endpointGroup in endpointGroups)
         {

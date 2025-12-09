@@ -11,6 +11,7 @@ using Mono.Nat;
 
 using Pmmux.Abstractions;
 using Pmmux.Extensions.Management.Abstractions;
+using Pmmux.Extensions.Management.Dtos;
 
 using IEndpointRouteBuilder = Microsoft.AspNetCore.Routing.IEndpointRouteBuilder;
 
@@ -26,15 +27,15 @@ internal class BackendsEndpointGroup(IRouter router) : IManagementEndpointGroup
         {
             using (ExecutionContext.SuppressFlow())
             {
-                return router.GetBackends(networkProtocol);
+                return router.GetBackends(networkProtocol).Select(BackendInfoDto.FromBackendStatusInfo).ToList();
             }
         });
-        builder.MapPost("{protocolName}/{name}", (
+        builder.MapPost("{protocolName}/{name}", async (
             string protocolName,
             string name,
             [FromQuery] Protocol networkProtocol,
             [FromBody] Dictionary<string, string> parameters,
-            CancellationToken cancellationToken) => async () =>
+            CancellationToken cancellationToken) =>
         {
             Task<BackendInfo> task;
 
@@ -50,13 +51,13 @@ internal class BackendsEndpointGroup(IRouter router) : IManagementEndpointGroup
                         cancellationToken: cancellationToken).ConfigureAwait(false);
                 });
             }
-            return Results.Ok(await task.ConfigureAwait(false));
+            return Results.Ok(BackendInfoDto.FromBackendInfo(await task.ConfigureAwait(false)));
         });
-        builder.MapDelete("{protocolName}/{name}", (
+        builder.MapDelete("{protocolName}/{name}", async (
             string protocolName,
             string name,
             [FromQuery] Protocol networkProtocol,
-            CancellationToken cancellationToken) => async () =>
+            CancellationToken cancellationToken) =>
         {
             Task<bool> task;
 
@@ -121,7 +122,7 @@ internal class BackendsEndpointGroup(IRouter router) : IManagementEndpointGroup
                 });
             }
             return await task.ConfigureAwait(false) is { } backendInfo
-                ? Results.Ok(backendInfo)
+                ? Results.Ok(BackendInfoDto.FromBackendInfo(backendInfo))
                 : Results.NotFound();
         });
     }

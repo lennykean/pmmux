@@ -5,8 +5,9 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Pmmux.Abstractions;
+using Pmmux.Core;
 
-namespace Pmmux.Core.Backend;
+namespace Pmmux.Extensions.BitTorrent;
 
 internal sealed class BitTorrentPassthroughBackend(BackendSpec backendSpec) : PassthroughBackend(backendSpec)
 {

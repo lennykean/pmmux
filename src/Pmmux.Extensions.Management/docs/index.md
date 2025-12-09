@@ -11,3 +11,4 @@ Built on ASP\.NET Core Minimal APIs\.
 | Namespaces | |
 | :--- | :--- |
 | [Pmmux\.Extensions\.Management](Pmmux/Extensions/Management/index.md 'Pmmux\.Extensions\.Management') | |
+| [Pmmux\.Extensions\.Management\.Dtos](Pmmux/Extensions/Management/Dtos/index.md 'Pmmux\.Extensions\.Management\.Dtos') | |

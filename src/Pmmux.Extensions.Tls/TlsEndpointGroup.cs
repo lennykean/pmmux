@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 
@@ -9,14 +10,12 @@ using Microsoft.AspNetCore.Routing;
 
 using Pmmux.Extensions.Management.Abstractions;
 using Pmmux.Extensions.Tls.Abstractions;
+using Pmmux.Extensions.Tls.Dtos;
 
 namespace Pmmux.Extensions.Tls;
 
 internal class TlsEndpointGroup(ICertificateManager certificateManager) : IManagementEndpointGroup
 {
-    private record CertificateMapping(string Hostname, string CertificateName);
-
-
     string IManagementEndpointGroup.Name => "tls";
 
     void IManagementEndpointGroup.MapEndpoints(IEndpointRouteBuilder builder)
@@ -28,17 +27,17 @@ internal class TlsEndpointGroup(ICertificateManager certificateManager) : IManag
                 return Results.Ok(certificateManager.GetCertificateNames());
             }
         });
-        builder.MapPost("/certificates", (
+        builder.MapPost("/certificates", async (
             string certificateName,
             [FromBody] Stream certificateStream,
             [FromQuery] CertificateType certificateType,
             [FromQuery] string? password) =>
         {
-            using (var certificateData = new MemoryStream())
+            using var certificateData = new MemoryStream();
+            await certificateStream.CopyToAsync(certificateData).ConfigureAwait(false);
+
             using (ExecutionContext.SuppressFlow())
             {
-                certificateStream.CopyTo(certificateData);
-
                 return certificateType switch
                 {
                     CertificateType.Pfx => Results.Ok(certificateManager.TryAddCertificate(
@@ -62,10 +61,13 @@ internal class TlsEndpointGroup(ICertificateManager certificateManager) : IManag
         {
             using (ExecutionContext.SuppressFlow())
             {
-                return Results.Ok(certificateManager.GetMappings());
+                var mappings = certificateManager.GetMappings()
+                    .Select(m => new CertificateMappingDto(m.Hostname, m.CertificateName))
+                    .ToList();
+                return Results.Ok(mappings);
             }
         });
-        builder.MapPost("/certificate-mappings", ([FromBody] CertificateMapping mapping) =>
+        builder.MapPost("/certificate-mappings", ([FromBody] CertificateMappingRequestDto mapping) =>
         {
             using (ExecutionContext.SuppressFlow())
             {

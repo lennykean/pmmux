@@ -406,11 +406,15 @@ public sealed class PortWarden(
                         return true;
                     }).ConfigureAwait(false);
 
+                _portMaps.TryRemove(portMap, out _);
+
                 metricReporter.ReportEvent("portmap.deleted", "port-warden", metadata);
 
                 eventSender.RaisePortMapRemoved(this, portMap);
 
                 _logger.LogDebug("port map deleted");
+
+                return true;
             }
             catch (Exception ex)
             {
@@ -420,9 +424,10 @@ public sealed class PortWarden(
                 {
                     ["error"] = ex.GetType().Name
                 });
+
+                return false;
             }
         }
-        return true;
     }
 }
 
