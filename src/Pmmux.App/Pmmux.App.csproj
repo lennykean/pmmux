@@ -12,33 +12,39 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <IsLinux Condition="$(RuntimeIdentifier.StartsWith('linux'))">true</IsLinux>
+    <IsOSX Condition="$(RuntimeIdentifier.StartsWith('osx'))">true</IsOSX>
+    <IsWindows Condition="'$(IsLinux)' != 'true' AND '$(IsOSX)' != 'true'">true</IsWindows>
+  </PropertyGroup>
+
   <ItemGroup>
     <Compile Remove="**\*.Windows.cs" />
     <Compile Remove="**\*.Linux.cs" />
     <Compile Remove="**\*.OSX.cs" />
   </ItemGroup>
 
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+  <ItemGroup Condition="'$(IsWindows)' == 'true'">
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
     <PackageReference Include="TopShelf.ServiceInstaller" />
     <Compile Include="**\*.Windows.cs" />
   </ItemGroup>
-  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+  <PropertyGroup Condition="'$(IsWindows)' == 'true'">
     <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
   </PropertyGroup>
 
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Linux'))">
+  <ItemGroup Condition="'$(IsLinux)' == 'true'">
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" />
     <Compile Include="**\*.Linux.cs" />
   </ItemGroup>
-  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Linux'))">
+  <PropertyGroup Condition="'$(IsLinux)' == 'true'">
     <DefineConstants>$(DefineConstants);LINUX</DefineConstants>
   </PropertyGroup>
 
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+  <ItemGroup Condition="'$(IsOSX)' == 'true'">
     <Compile Include="**\*.OSX.cs" />
   </ItemGroup>
-  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+  <PropertyGroup Condition="'$(IsOSX)' == 'true'">
     <DefineConstants>$(DefineConstants);MACOS</DefineConstants>
   </PropertyGroup>
 

@@ -10,6 +10,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Pmmux.Abstractions\Pmmux.Abstractions.csproj" />
+    <ProjectReference Include="..\Pmmux.Extensions.Management.Models\Pmmux.Extensions.Management.Models.csproj" />
   </ItemGroup>
 </Project>

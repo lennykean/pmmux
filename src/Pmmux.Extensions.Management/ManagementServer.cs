@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text.Json.Serialization;
@@ -36,6 +37,16 @@ internal partial class ManagementServer(
 
         builder.Services.AddOpenApi();
 
+        builder.Services.AddCors(options =>
+        {
+            options.AddDefaultPolicy(policy =>
+            {
+                policy.AllowAnyOrigin()
+                      .AllowAnyMethod()
+                      .AllowAnyHeader();
+            });
+        });
+
         builder.WebHost.ConfigureKestrel(options =>
         {
             options.Listen(config.ManagementBindAddress, config.ManagementPort);
@@ -59,16 +70,22 @@ internal partial class ManagementServer(
 
         var app = builder.Build();
 
+        app.UseCors();
         app.MapOpenApi();
+        app.MapGet("/healthz", () => Results.Ok());
 
         var apiGroup = app.MapGroup("api");
-
-        apiGroup.MapGet("/healthz", () => Results.Ok());
 
         foreach (var endpointGroup in endpointGroups)
         {
             var group = apiGroup.MapGroup(endpointGroup.Name);
+            _logger.LogDebug("mapping endpoints for {EndpointGroupName}", endpointGroup.Name);
             endpointGroup.MapEndpoints(group);
+        }
+
+        if (config.ManagementUiEnable)
+        {
+            app.UseManagementUi(apiBaseAddress: new Uri("/", UriKind.Relative));
         }
 
         await app.StartAsync(cancellationToken).ConfigureAwait(false);

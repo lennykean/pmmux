@@ -27,7 +27,7 @@ internal static class NetworkUtility
 
         cancellationToken.Register(() => completionSource.TrySetCanceled(cancellationToken));
 
-        void DeviceFoundHandler(object sender, DeviceEventArgs e)
+        void DeviceFoundHandler(object? sender, DeviceEventArgs e)
         {
             if (cancellationToken.IsCancellationRequested)
             {
@@ -105,7 +105,10 @@ internal static class NetworkUtility
         if (connection.ProtocolType == ProtocolType.Tcp)
         {
             properties["no-delay"] = connection.NoDelay.ToString();
-            properties["linger-state"] = connection.LingerState.Enabled.ToString();
+            if (connection?.LingerState?.Enabled is true)
+            {
+                properties["linger-state"] = bool.TrueString;
+            }
         }
 
         return properties;

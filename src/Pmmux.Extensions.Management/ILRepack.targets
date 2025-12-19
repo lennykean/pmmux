@@ -5,7 +5,6 @@
       <InputAssemblies Include="$(OutputPath)$(AssemblyName).dll" />
       <InputAssemblies Include="$(OutputPath)Microsoft.AspNetCore.OpenApi.dll" />
       <InputAssemblies Include="$(OutputPath)Microsoft.OpenApi.dll" />
-      <InputAssemblies Include="$(OutputPath)Pmmux.Extensions.Management.Abstractions.dll" />
     </ItemGroup>
     <ILRepack
       Internalize="true"

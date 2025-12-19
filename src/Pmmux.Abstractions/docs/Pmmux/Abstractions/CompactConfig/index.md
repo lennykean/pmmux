@@ -17,9 +17,12 @@ Implements [System\.IEquatable&lt;](https://learn.microsoft.com/en-us/dotnet/api
 Parsing a backend configuration string:
 
 ```csharp
-var input = "web:pass:ip=127.0.0.1,port=3000";
+var input = "web:pass:target.ip=127.0.0.1,target.port=3000";
 var segments = CompactConfig.Parse(input);
-// Returns: IdentifierSegment("web"), IdentifierSegment("pass"), PropertiesSegment({ ip=127.0.0.1, port=3000 })
+// Returns:
+// IdentifierSegment("web"),
+// IdentifierSegment("pass"),
+// PropertiesSegment({ ["target.ip"] = "127.0.0.1", ["target.port"] = "3000" })
 ```
 
 ### Remarks

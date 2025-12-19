@@ -1,0 +1,491 @@
+@page "/"
+@using Pmmux.Abstractions
+@using Pmmux.Extensions.Management.Models
+@using Pmmux.Extensions.Management.UI.Services
+@using Pmmux.Extensions.Management.UI.Components
+@using Mono.Nat
+@inject PmmuxApiClient ApiClient
+
+<PageTitle>Backends - Pmmux</PageTitle>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-header__content">
+      <h2 class="card-header__title">Backends</h2>
+      <p class="card-header__subtitle">Manage backend servers and routing</p>
+    </div>
+    <div class="card-header__actions">
+      <select class="protocol-select" @bind="networkProtocol" @bind:after="LoadBackends">
+        <option value="@Protocol.Tcp">TCP</option>
+        <option value="@Protocol.Udp">UDP</option>
+      </select>
+      <button class="btn btn--primary" @onclick="OpenAddModal">
+        <i class="ph ph-plus"></i>
+        Add Backend
+      </button>
+    </div>
+  </div>
+  <div class="card-body card-body--no-padding">
+    @if (loading && backends.Count == 0)
+    {
+      <div class="loading-state">Loading backends...</div>
+    }
+    else if (error != null)
+    {
+      <div class="error-state">@error</div>
+    }
+    else if (backends.Count == 0)
+    {
+      <div class="empty-state">
+        <div class="empty-state__icon">
+          <i class="ph ph-hard-drives"></i>
+        </div>
+        <h3 class="empty-state__title">No backends configured</h3>
+        <p class="empty-state__description">
+          No @networkProtocol backends are currently running. Add a backend to start routing traffic.
+        </p>
+        <button class="btn btn--primary" @onclick="OpenAddModal">Add Backend</button>
+      </div>
+    }
+    else
+    {
+      <div class="table-wrapper">
+        <table class="table">
+          <thead class="table-head">
+            <tr class="table-row">
+              <th class="table-header">Name</th>
+              <th class="table-header">Protocol</th>
+              <th class="table-header">Status</th>
+              <th class="table-header">Priority</th>
+              <th class="table-header">Parameters</th>
+              <th class="table-header table-cell--right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="table-body">
+            @foreach (var (backend, index) in backends.Select((b, i) => (b, i)))
+            {
+              var key = $"{backend.Spec.ProtocolName}/{backend.Spec.Name}/{backend.Status}/{index}";
+              var isDraining = backend.Status == BackendStatus.Draining;
+              <tr class="table-row" @key="key">
+                <td class="table-cell">
+                  <code>@backend.Spec.Name</code>
+                </td>
+                <td class="table-cell">
+                  <span class="protocol-badge">@backend.Spec.ProtocolName</span>
+                </td>
+                <td class="table-cell">
+                  <StatusBadge Status="@backend.Status" />
+                </td>
+                <td class="table-cell">
+                  <span class="priority-badge priority-@(GetPriorityName(backend.PriorityTier).ToLower())">
+                    @GetPriorityName(backend.PriorityTier)
+                  </span>
+                </td>
+                <td class="table-cell">
+                  <span class="params-text">@FormatParameters(backend.Spec.Parameters)</span>
+                </td>
+                <td class="table-cell table-cell--right">
+                  <div class="action-buttons">
+                    @if (!isDraining)
+                    {
+                      <button class="btn btn--secondary btn--sm" @onclick="() => OpenEditModal(backend)">
+                        Edit
+                      </button>
+                    }
+                    <button class="btn btn--danger btn--sm" @onclick="() => ConfirmDelete(backend)" disabled="@isDraining">
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>
+
+@if (showAddModal)
+{
+  <div class="modal-overlay" @onclick="CloseAddModal">
+    <div class="modal" @onclick:stopPropagation="true">
+      <div class="modal-header">
+        <h3 class="modal-title">Add Backend</h3>
+      </div>
+      <div class="modal-body">
+        @if (modalError != null)
+        {
+          <div class="modal-error">@modalError</div>
+        }
+        <div class="form-group">
+          <label class="form-label">Name</label>
+          <input class="form-input" type="text" placeholder="my-backend" @bind="newName" @bind:event="oninput" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Backend Protocol</label>
+          <input class="form-input" type="text" placeholder="pass" @bind="newProtocol" @bind:event="oninput" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Priority</label>
+          <select class="form-select" @bind="newPriority">
+            <option value="@PriorityTier.Fallback">Fallback</option>
+            <option value="@PriorityTier.Standby">Standby</option>
+            <option value="@PriorityTier.Normal">Normal</option>
+            <option value="@PriorityTier.Vip">VIP</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Parameters</label>
+          <textarea class="form-textarea" rows="3" placeholder="target.ip=127.0.0.1,target.port=8080" @bind="newParameters"
+            @bind:event="oninput"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn--secondary" @onclick="CloseAddModal">Cancel</button>
+        <button class="btn btn--primary" @onclick="AddBackend" disabled="@(string.IsNullOrEmpty(newName) || adding)">
+          @if (adding)
+          {
+            <span class="loading-spinner"></span>
+          }
+          Add Backend
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showEditModal && editBackend != null)
+{
+  <div class="modal-overlay" @onclick="CloseEditModal">
+    <div class="modal" @onclick:stopPropagation="true">
+      <div class="modal-header">
+        <h3 class="modal-title">Edit Backend</h3>
+      </div>
+      <div class="modal-body">
+        @if (modalError != null)
+        {
+          <div class="modal-error">@modalError</div>
+        }
+        <div class="edit-info">
+          <div class="edit-info__row">
+            <span class="edit-info__label">Name</span>
+            <code>@editBackend.Spec.Name</code>
+          </div>
+          <div class="edit-info__row">
+            <span class="edit-info__label">Protocol</span>
+            <span class="protocol-badge">@editBackend.Spec.ProtocolName</span>
+          </div>
+          <div class="edit-info__row">
+            <span class="edit-info__label">Status</span>
+            <StatusBadge Status="@editBackend.Status" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Priority</label>
+          <select class="form-select" @bind="editPriority">
+            <option value="@PriorityTier.Fallback">Fallback</option>
+            <option value="@PriorityTier.Standby">Standby</option>
+            <option value="@PriorityTier.Normal">Normal</option>
+            <option value="@PriorityTier.Vip">VIP</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Parameters</label>
+          <textarea class="form-textarea" rows="3" placeholder="target.ip=127.0.0.1,target.port=8080" @bind="editParameters"
+            @bind:event="oninput"></textarea>
+        </div>
+        <div class="edit-warning">
+          <i class="ph ph-warning"></i>
+          <span>Existing connections will be drained.</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn--secondary" @onclick="CloseEditModal">Cancel</button>
+        <button class="btn btn--primary" @onclick="UpdateBackend">Update Backend</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (deleteTarget != null)
+{
+  <div class="modal-overlay" @onclick="CancelDelete">
+    <div class="modal" @onclick:stopPropagation="true">
+      <div class="modal-header">
+        <h3 class="modal-title">Delete Backend</h3>
+      </div>
+      <div class="modal-body">
+        @if (modalError != null)
+        {
+          <div class="modal-error">@modalError</div>
+        }
+        <div class="confirm-content">
+          <p>Delete backend <strong>@deleteTarget.Spec.Name</strong>?</p>
+          <p>Active connections will be terminated.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn--secondary" @onclick="CancelDelete">Cancel</button>
+        <button class="btn btn--danger" @onclick="DeleteBackend">Delete</button>
+      </div>
+    </div>
+  </div>
+}
+
+@code {
+  private List<BackendStatusInfoDto> backends = new();
+  private bool loading = true;
+  private string? error = null;
+  private Protocol networkProtocol = Protocol.Tcp;
+  private bool showAddModal = false;
+  private bool showEditModal = false;
+  private bool adding = false;
+  private BackendStatusInfoDto? deleteTarget = null;
+  private BackendStatusInfoDto? editBackend = null;
+
+  private string newName = "";
+  private string newProtocol = "pass";
+  private string newParameters = "target.ip=127.0.0.1,target.port=8080";
+  private PriorityTier newPriority = PriorityTier.Normal;
+
+  private string editParameters = "";
+  private PriorityTier editPriority = PriorityTier.Normal;
+
+  private string? modalError = null;
+
+  private System.Timers.Timer? refreshTimer;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await LoadBackends();
+    StartAutoRefresh();
+  }
+
+  private async Task LoadBackends()
+  {
+    try
+    {
+      loading = true;
+      error = null;
+      backends = await ApiClient.GetBackendsAsync(networkProtocol);
+    }
+    catch (Exception ex)
+    {
+      error = ex.Message;
+    }
+    finally
+    {
+      loading = false;
+      StateHasChanged();
+    }
+  }
+
+  private void StartAutoRefresh()
+  {
+    refreshTimer = new System.Timers.Timer(5000);
+    refreshTimer.Elapsed += async (sender, e) => await LoadBackends();
+    refreshTimer.Start();
+  }
+
+  private void OpenAddModal()
+  {
+    modalError = null;
+    showAddModal = true;
+  }
+
+  private void CloseAddModal()
+  {
+    showAddModal = false;
+    modalError = null;
+    ResetAddForm();
+  }
+
+  private void ResetAddForm()
+  {
+    newName = "";
+    newProtocol = "pass";
+    newParameters = "target.ip=127.0.0.1,target.port=8080";
+    newPriority = PriorityTier.Normal;
+  }
+
+  private async Task AddBackend()
+  {
+    try
+    {
+      adding = true;
+      modalError = null;
+      var parameters = ParseParameters(newParameters);
+      parameters["priority"] = newPriority.ToString().ToLower();
+
+      var request = new BackendRequest
+      {
+        Parameters = parameters,
+        PriorityTier = newPriority,
+        NetworkProtocol = networkProtocol
+      };
+
+      await ApiClient.CreateBackendAsync(newProtocol, newName, request);
+      CloseAddModal();
+      await LoadBackends();
+    }
+    catch (Exception ex)
+    {
+      modalError = GetErrorMessage(ex);
+    }
+    finally
+    {
+      adding = false;
+    }
+  }
+
+  private void OpenEditModal(BackendStatusInfoDto backend)
+  {
+    modalError = null;
+    editBackend = backend;
+    editParameters = FormatParameters(backend.Spec.Parameters);
+    editPriority = backend.PriorityTier;
+    showEditModal = true;
+  }
+
+  private void CloseEditModal()
+  {
+    showEditModal = false;
+    modalError = null;
+    editBackend = null;
+  }
+
+  private async Task UpdateBackend()
+  {
+    if (editBackend == null)
+    {
+      return;
+    }
+
+    try
+    {
+      modalError = null;
+      var parameters = ParseParameters(editParameters);
+      parameters["priority"] = editPriority.ToString().ToLower();
+
+      var request = new BackendRequest
+      {
+        Parameters = parameters,
+        PriorityTier = editPriority,
+        NetworkProtocol = networkProtocol
+      };
+
+      var backend = editBackend;
+      CloseEditModal();
+
+      _ = ApiClient.UpdateBackendAsync(
+      backend.Spec.ProtocolName,
+      backend.Spec.Name,
+      request
+      ).ContinueWith(_ => InvokeAsync(LoadBackends));
+
+      await LoadBackends();
+    }
+    catch (Exception ex)
+    {
+      modalError = GetErrorMessage(ex);
+    }
+  }
+
+  private void ConfirmDelete(BackendStatusInfoDto backend)
+  {
+    modalError = null;
+    deleteTarget = backend;
+  }
+
+  private void CancelDelete()
+  {
+    deleteTarget = null;
+    modalError = null;
+  }
+
+  private async Task DeleteBackend()
+  {
+    if (deleteTarget == null)
+    {
+      return;
+    }
+
+    try
+    {
+      modalError = null;
+      await ApiClient.DeleteBackendAsync(deleteTarget.Spec.ProtocolName, deleteTarget.Spec.Name, networkProtocol);
+      deleteTarget = null;
+      await LoadBackends();
+    }
+    catch (Exception ex)
+    {
+      modalError = GetErrorMessage(ex);
+    }
+  }
+
+  private Dictionary<string, string> ParseParameters(string paramsStr)
+  {
+    var result = new Dictionary<string, string>();
+    if (string.IsNullOrWhiteSpace(paramsStr))
+    {
+      return result;
+    }
+
+    foreach (var pair in paramsStr.Split(','))
+    {
+      var idx = pair.IndexOf('=');
+      if (idx > 0)
+      {
+        var key = pair[..idx].Trim();
+        var value = pair[(idx + 1)..].Trim();
+        if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(value))
+        {
+          result[key] = value;
+        }
+      }
+    }
+    return result;
+  }
+
+  private string FormatParameters(Dictionary<string, string> parameters)
+  {
+    return string.Join(",\n", parameters.Select(kv => $"{kv.Key}={kv.Value}"));
+  }
+
+  private string GetPriorityName(PriorityTier tier)
+  {
+    return tier switch
+    {
+      PriorityTier.Fallback => "Fallback",
+      PriorityTier.Standby => "Standby",
+      PriorityTier.Normal => "Normal",
+      PriorityTier.Vip => "VIP",
+      _ => "Unknown"
+    };
+  }
+
+  private static string GetErrorMessage(Exception ex)
+  {
+    if (ex is PmmuxApiClient.ApiException apiEx)
+    {
+      return apiEx.Message;
+    }
+
+    var message = ex.Message;
+    if (ex.GetType().Name == "JSException" && message.Contains("Failed to fetch"))
+    {
+      return "Unable to connect to the server";
+    }
+    if (ex is HttpRequestException)
+    {
+      return "Server error";
+    }
+    return string.IsNullOrWhiteSpace(message) ? "An unexpected error occurred" : message;
+  }
+
+  public void Dispose()
+  {
+    refreshTimer?.Dispose();
+  }
+}

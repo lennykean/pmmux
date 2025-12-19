@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -31,8 +32,9 @@ public interface IPortMultiplexer : IAsyncDisposable
     /// </summary>
     /// <param name="networkProtocol">The network protocol that the listener will accept.</param>
     /// <param name="port">The port number to listen on.</param>
+    /// <param name="bindAddress">The IP address to bind the listener to.</param>
     /// <returns>Created <see cref="ListenerInfo"/> if successful; otherwise, <c>null</c>.</returns>
-    ListenerInfo? AddListener(Protocol networkProtocol, int port);
+    ListenerInfo? AddListener(Protocol networkProtocol, int port, IPAddress? bindAddress = null);
 
     /// <summary>
     /// Remove an existing listener on the specified port.

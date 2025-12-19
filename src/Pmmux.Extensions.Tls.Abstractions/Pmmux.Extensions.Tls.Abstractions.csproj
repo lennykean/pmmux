@@ -4,8 +4,4 @@
     <AssemblyName>$(MSBuildProjectName)</AssemblyName>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
   </PropertyGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Pmmux.Core\Pmmux.Core.csproj" />
-  </ItemGroup>
 </Project>

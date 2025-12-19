@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <AssemblyName>$(MSBuildProjectName)</AssemblyName>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <PublishTrimmed>true</PublishTrimmed>
+    <WasmEnableHotReload>false</WasmEnableHotReload>
+    <CompressionEnabled>false</CompressionEnabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pmmux.Extensions.Tls.Abstractions\Pmmux.Extensions.Tls.Abstractions.csproj" />
+    <ProjectReference Include="..\Pmmux.Extensions.Management.Models\Pmmux.Extensions.Management.Models.csproj" />
+  </ItemGroup>
+</Project>

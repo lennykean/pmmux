@@ -5,7 +5,7 @@ using System.ServiceProcess;
 
 namespace Pmmux.App;
 
-internal class UninstallCommand : Command
+internal sealed class UninstallCommand : Command
 {
     public UninstallCommand() : base("uninstall", "uninstall service")
     {

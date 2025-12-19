@@ -146,7 +146,10 @@ internal class BackendMessageBroker(
         if (Status.Status is not BackendStatus.Stopped)
         {
             Status = new(Backend, BackendStatus.Stopped);
-            Logger.LogDebug("status changed: {BackendStatus} ({Reason})", Status.Status, Status.StatusReason);
+            Logger.LogDebug(
+                "status changed: {BackendStatus}{StatusReason}",
+                Status.Status,
+                Status.StatusReason is null ? "" : $" ({Status.StatusReason})");
         }
 
         _disposedTsc.SetResult(true);

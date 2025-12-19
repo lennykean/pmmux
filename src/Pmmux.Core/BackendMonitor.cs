@@ -205,9 +205,18 @@ public sealed class BackendMonitor(
     /// <inheritdoc />
     public bool TryAddHealthCheck(HealthCheckSpec healthCheckSpec)
     {
+        _logger.LogTrace(
+            "adding health check for {ProtocolName}:{BackendName}",
+            healthCheckSpec.ProtocolName ?? "*",
+            healthCheckSpec.BackendName ?? "*");
+
         var added = _healthChecks.TryAdd(healthCheckSpec, healthCheckSpec);
         if (added)
         {
+            _logger.LogDebug(
+                "added health check for {ProtocolName}:{BackendName}",
+                healthCheckSpec.ProtocolName ?? "*",
+                healthCheckSpec.BackendName ?? "*");
             eventSender.RaiseHealthCheckAdded(this, healthCheckSpec);
         }
 
@@ -219,9 +228,18 @@ public sealed class BackendMonitor(
     /// <inheritdoc />
     public bool TryRemoveHealthCheck(HealthCheckSpec healthCheckSpec)
     {
+        _logger.LogTrace(
+            "removing health check for {ProtocolName}:{BackendName}",
+            healthCheckSpec.ProtocolName ?? "*",
+            healthCheckSpec.BackendName ?? "*");
+
         var removed = _healthChecks.TryRemove(healthCheckSpec, out _);
         if (removed)
         {
+            _logger.LogDebug(
+                "removed health check for {ProtocolName}:{BackendName}",
+                healthCheckSpec.ProtocolName ?? "*",
+                healthCheckSpec.BackendName ?? "*");
             eventSender.RaiseHealthCheckRemoved(this, healthCheckSpec);
         }
 

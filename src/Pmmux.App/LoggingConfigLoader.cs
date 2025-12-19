@@ -59,14 +59,15 @@ internal class LoggingConfigLoader
             .SetMinimumLevel(verbosity)
 #if LINUX
             .AddSystemdConsole(logger =>
+            {
 #else
             .AddSimpleConsole(logger =>
-#endif
             {
+                logger.SingleLine = true;
+#endif
                 logger.TimestampFormat = " [yyyy-MM-ddTHH:mm:ss.fffZ] ";
                 logger.UseUtcTimestamp = true;
                 logger.IncludeScopes = true;
-                logger.SingleLine = true;
             });
 
         if (logMetrics)

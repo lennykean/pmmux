@@ -15,6 +15,5 @@ Implements [System\.IEquatable&lt;](https://learn.microsoft.com/en-us/dotnet/api
 
 | Properties | |
 | :--- | :--- |
-| [BindAddress](BindAddress.md 'Pmmux\.Core\.Configuration\.ListenerConfig\.BindAddress') | IP address to bind listeners to\. |
 | [PortBindings](PortBindings.md 'Pmmux\.Core\.Configuration\.ListenerConfig\.PortBindings') | List of port bindings for the listener\. |
 | [QueueLength](QueueLength.md 'Pmmux\.Core\.Configuration\.ListenerConfig\.QueueLength') | Maximum queue length for incoming connections\. |

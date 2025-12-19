@@ -6,10 +6,10 @@
 HTTP backend that proxies requests to an upstream server using YARP\.
 
 ```csharp
-public sealed class HttpProxyBackend : Pmmux.Extensions.Http.HttpBackend, Pmmux.Abstractions.IHealthCheckBackend, Pmmux.Abstractions.IBackend, System.IAsyncDisposable
+public sealed class HttpProxyBackend : Pmmux.Extensions.Http.HttpBackendBase, Pmmux.Abstractions.IHealthCheckBackend, Pmmux.Abstractions.IBackend, System.IAsyncDisposable
 ```
 
-Inheritance [System\.Object](https://learn.microsoft.com/en-us/dotnet/api/system.object 'System\.Object') &#129106; [HttpBackend](../HttpBackend/index.md 'Pmmux\.Extensions\.Http\.HttpBackend') &#129106; HttpProxyBackend
+Inheritance [System\.Object](https://learn.microsoft.com/en-us/dotnet/api/system.object 'System\.Object') &#129106; [BackendBase](..\..\Pmmux.Core\docs\Pmmux/Core/BackendBase/index.md 'Pmmux\.Core\.BackendBase') &#129106; [HttpBackendBase](../HttpBackendBase/index.md 'Pmmux\.Extensions\.Http\.HttpBackendBase') &#129106; HttpProxyBackend
 
 Implements [IHealthCheckBackend](..\..\Pmmux.Abstractions\docs\Pmmux/Abstractions/IHealthCheckBackend/index.md 'Pmmux\.Abstractions\.IHealthCheckBackend'), [IBackend](..\..\Pmmux.Abstractions\docs\Pmmux/Abstractions/IBackend/index.md 'Pmmux\.Abstractions\.IBackend'), [System\.IAsyncDisposable](https://learn.microsoft.com/en-us/dotnet/api/system.iasyncdisposable 'System\.IAsyncDisposable')
 

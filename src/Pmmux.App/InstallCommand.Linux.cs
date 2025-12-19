@@ -1,6 +1,5 @@
 using System;
 using System.CommandLine;
-using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -8,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Pmmux.App;
 
-public class InstallCommand : Command
+internal sealed class InstallCommand : Command
 {
     public Option<string?> ArgumentsOption { get; } = new("--arguments", "-a")
     {
@@ -31,6 +30,7 @@ public class InstallCommand : Command
 
         var executable = Path.Combine(AppContext.BaseDirectory, "pmmux");
         var arguments = result.GetValue(ArgumentsOption);
+        var execStart = string.IsNullOrEmpty(arguments) ? executable : $"{executable} {arguments}";
 
         var unitFileContent = new StringBuilder();
         unitFileContent.AppendLine("[Unit]");
@@ -39,7 +39,7 @@ public class InstallCommand : Command
         unitFileContent.AppendLine();
         unitFileContent.AppendLine("[Service]");
         unitFileContent.AppendLine("Type=notify");
-        unitFileContent.AppendLine($"ExecStart={executable} {arguments}");
+        unitFileContent.AppendLine($"ExecStart={execStart}");
         unitFileContent.AppendLine("Restart=on-failure");
         unitFileContent.AppendLine("RestartSec=5");
         unitFileContent.AppendLine("KillSignal=SIGTERM");
@@ -52,11 +52,8 @@ public class InstallCommand : Command
         await File.WriteAllTextAsync(unitFilePath, unitFileContent.ToString(), cancellationToken)
             .ConfigureAwait(false);
 
-        await Process.Start("systemctl", "daemon-reload")
-            .WaitForExitAsync(cancellationToken)
-            .ConfigureAwait(false);
-        await Process.Start("systemctl", "start pmmux.service")
-            .WaitForExitAsync(cancellationToken)
-            .ConfigureAwait(false);
+        await ShellUtility.ExecAsync("systemctl", "daemon-reload", cancellationToken).ConfigureAwait(false);
+        await ShellUtility.ExecAsync("systemctl", "enable pmmux.service", cancellationToken).ConfigureAwait(false);
+        await ShellUtility.ExecAsync("systemctl", "start pmmux.service", cancellationToken).ConfigureAwait(false);
     }
 }

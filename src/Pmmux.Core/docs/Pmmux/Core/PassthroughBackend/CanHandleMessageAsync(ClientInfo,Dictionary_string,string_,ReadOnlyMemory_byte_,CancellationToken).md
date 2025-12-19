@@ -6,7 +6,7 @@
 Determine whether this backend can handle the message\.
 
 ```csharp
-public virtual System.Threading.Tasks.Task<bool> CanHandleMessageAsync(Pmmux.Abstractions.ClientInfo client, System.Collections.Generic.Dictionary<string,string> messageMetadata, System.ReadOnlyMemory<byte> message, System.Threading.CancellationToken cancellationToken=default(System.Threading.CancellationToken));
+public virtual System.Threading.Tasks.Task<bool> CanHandleMessageAsync(Pmmux.Abstractions.ClientInfo client, System.Collections.Generic.Dictionary<string,string> messageProperties, System.ReadOnlyMemory<byte> message, System.Threading.CancellationToken cancellationToken=default(System.Threading.CancellationToken));
 ```
 #### Parameters
 
@@ -16,9 +16,11 @@ public virtual System.Threading.Tasks.Task<bool> CanHandleMessageAsync(Pmmux.Abs
 
 The client that sent the message\.
 
-<a name='Pmmux.Core.PassthroughBackend.CanHandleMessageAsync(Pmmux.Abstractions.ClientInfo,System.Collections.Generic.Dictionary_string,string_,System.ReadOnlyMemory_byte_,System.Threading.CancellationToken).messageMetadata'></a>
+<a name='Pmmux.Core.PassthroughBackend.CanHandleMessageAsync(Pmmux.Abstractions.ClientInfo,System.Collections.Generic.Dictionary_string,string_,System.ReadOnlyMemory_byte_,System.Threading.CancellationToken).messageProperties'></a>
 
-`messageMetadata` [System\.Collections\.Generic\.Dictionary&lt;](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.dictionary-2 'System\.Collections\.Generic\.Dictionary\`2')[System\.String](https://learn.microsoft.com/en-us/dotnet/api/system.string 'System\.String')[,](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.dictionary-2 'System\.Collections\.Generic\.Dictionary\`2')[System\.String](https://learn.microsoft.com/en-us/dotnet/api/system.string 'System\.String')[&gt;](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.dictionary-2 'System\.Collections\.Generic\.Dictionary\`2')
+`messageProperties` [System\.Collections\.Generic\.Dictionary&lt;](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.dictionary-2 'System\.Collections\.Generic\.Dictionary\`2')[System\.String](https://learn.microsoft.com/en-us/dotnet/api/system.string 'System\.String')[,](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.dictionary-2 'System\.Collections\.Generic\.Dictionary\`2')[System\.String](https://learn.microsoft.com/en-us/dotnet/api/system.string 'System\.String')[&gt;](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.dictionary-2 'System\.Collections\.Generic\.Dictionary\`2')
+
+The metadata about the message \(protocol\-specific\)\.
 
 <a name='Pmmux.Core.PassthroughBackend.CanHandleMessageAsync(Pmmux.Abstractions.ClientInfo,System.Collections.Generic.Dictionary_string,string_,System.ReadOnlyMemory_byte_,System.Threading.CancellationToken).message'></a>
 

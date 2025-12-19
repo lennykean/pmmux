@@ -173,7 +173,11 @@ public class RandomRoutingStrategy : IRoutingStrategy
 {
     public string Name => "random";
 
-    public async Task<BackendInfo?> SelectBackendAsync(ClientInfo client, IReadOnlyDictionary<string, string> clientConnectionProperties, IAsyncEnumerable<BackendStatusInfo> matchedBackends, CancellationToken ct)
+    public async Task<BackendInfo?> SelectBackendAsync(
+        ClientInfo client,
+        IReadOnlyDictionary<string, string> clientConnectionProperties,
+        IAsyncEnumerable<BackendStatusInfo> matchedBackends,
+        CancellationToken ct)
     {
         var candidates = new List<BackendInfo>();
 
@@ -196,7 +200,7 @@ public class RandomRoutingStrategy : IRoutingStrategy
 
 ```sh
 # Usage
-pmmux -x MyExtension.dll -r random -b web1:pass:ip=10.0.0.1,port=80 -b web2:pass:ip=10.0.0.2,port=80
+pmmux -x MyExtension.dll -r random -b web1:pass:target.ip=10.0.0.1,target.port=80 -b web2:pass:target.ip=10.0.0.2,target.port=80
 ```
 
 ## Connection Negotiators

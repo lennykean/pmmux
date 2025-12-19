@@ -19,7 +19,7 @@ Implements [IPortMultiplexer](..\..\Pmmux.Abstractions\docs\Pmmux/Abstractions/I
 
 | Methods | |
 | :--- | :--- |
-| [AddListener\(Protocol, int\)](AddListener(Protocol,int).md 'Pmmux\.Core\.PortMultiplexer\.AddListener\(Mono\.Nat\.Protocol, int\)') | Add a new listener on the specified port\. |
+| [AddListener\(Protocol, int, IPAddress\)](AddListener(Protocol,int,IPAddress).md 'Pmmux\.Core\.PortMultiplexer\.AddListener\(Mono\.Nat\.Protocol, int, System\.Net\.IPAddress\)') | Add a new listener on the specified port\. |
 | [GetListenersAsync\(CancellationToken\)](GetListenersAsync(CancellationToken).md 'Pmmux\.Core\.PortMultiplexer\.GetListenersAsync\(System\.Threading\.CancellationToken\)') | Get the currently bound listener endpoints\. |
 | [RemoveListenerAsync\(Protocol, int, CancellationToken\)](RemoveListenerAsync(Protocol,int,CancellationToken).md 'Pmmux\.Core\.PortMultiplexer\.RemoveListenerAsync\(Mono\.Nat\.Protocol, int, System\.Threading\.CancellationToken\)') | Remove an existing listener on the specified port\. |
 | [StartAsync\(CancellationToken\)](StartAsync(CancellationToken).md 'Pmmux\.Core\.PortMultiplexer\.StartAsync\(System\.Threading\.CancellationToken\)') | Start accepting client connections and messages on bound listeners\. |

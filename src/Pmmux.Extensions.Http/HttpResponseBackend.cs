@@ -17,7 +17,7 @@ namespace Pmmux.Extensions.Http;
 internal class HttpResponseBackend(
     BackendSpec backendSpec,
     ILoggerFactory loggerFactory,
-    PriorityTier priorityTier = PriorityTier.Normal) : HttpBackend(backendSpec, loggerFactory, priorityTier)
+    PriorityTier priorityTier = PriorityTier.Normal) : HttpBackendBase(backendSpec, loggerFactory, priorityTier)
 {
     private int _responseStatus = 200;
     private string? _responseBody = null;

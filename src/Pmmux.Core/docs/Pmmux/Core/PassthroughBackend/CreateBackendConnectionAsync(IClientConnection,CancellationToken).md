@@ -6,7 +6,7 @@
 Create and establish the backend connection for the client\.
 
 ```csharp
-public System.Threading.Tasks.Task<Pmmux.Abstractions.IConnection> CreateBackendConnectionAsync(Pmmux.Abstractions.IClientConnection client, System.Threading.CancellationToken cancellationToken=default(System.Threading.CancellationToken));
+public virtual System.Threading.Tasks.Task<Pmmux.Abstractions.IConnection> CreateBackendConnectionAsync(Pmmux.Abstractions.IClientConnection client, System.Threading.CancellationToken cancellationToken=default(System.Threading.CancellationToken));
 ```
 #### Parameters
 

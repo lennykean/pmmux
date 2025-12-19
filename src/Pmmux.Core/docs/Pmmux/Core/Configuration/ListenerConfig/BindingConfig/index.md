@@ -15,9 +15,12 @@ Implements [System\.IEquatable&lt;](https://learn.microsoft.com/en-us/dotnet/api
 
 | Constructors | |
 | :--- | :--- |
-| [BindingConfig\(Protocol, int\)](BindingConfig(Protocol,int).md 'Pmmux\.Core\.Configuration\.ListenerConfig\.BindingConfig\.BindingConfig\(Mono\.Nat\.Protocol, int\)') | Represents a port binding configuration for a listener\. |
+| [BindingConfig\(Protocol, Nullable&lt;int&gt;, Nullable&lt;int&gt;, IPAddress, bool\)](BindingConfig(Protocol,Nullable_int_,Nullable_int_,IPAddress,bool).md 'Pmmux\.Core\.Configuration\.ListenerConfig\.BindingConfig\.BindingConfig\(Mono\.Nat\.Protocol, System\.Nullable\<int\>, System\.Nullable\<int\>, System\.Net\.IPAddress, bool\)') | Represents a port binding configuration for a listener\. |
 
 | Properties | |
 | :--- | :--- |
+| [BindAddress](BindAddress.md 'Pmmux\.Core\.Configuration\.ListenerConfig\.BindingConfig\.BindAddress') | The IP address to bind the listener to\. |
+| [Index](Index.md 'Pmmux\.Core\.Configuration\.ListenerConfig\.BindingConfig\.Index') | The index that correlates this binding to a port map configuration\. |
+| [Listen](Listen.md 'Pmmux\.Core\.Configuration\.ListenerConfig\.BindingConfig\.Listen') | Whether the multiplexer should create a listener for this binding\. |
 | [NetworkProtocol](NetworkProtocol.md 'Pmmux\.Core\.Configuration\.ListenerConfig\.BindingConfig\.NetworkProtocol') | Network protocol \(TCP or UDP\) for the binding\. |
 | [Port](Port.md 'Pmmux\.Core\.Configuration\.ListenerConfig\.BindingConfig\.Port') | Local port number to bind the listener to\. |

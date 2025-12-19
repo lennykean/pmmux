@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Linq;
 using System.Net;
@@ -23,10 +24,13 @@ namespace Pmmux.Extensions.Http;
 /// <summary>
 /// Base class for HTTP-based backends.
 /// </summary>
-public abstract class HttpBackend(
+/// <param name="backendSpec">The backend specification.</param>
+/// <param name="loggerFactory">The logger factory.</param>
+/// <param name="priority">The default priority tier.</param>
+public abstract class HttpBackendBase(
     BackendSpec backendSpec,
     ILoggerFactory loggerFactory,
-    PriorityTier priority) : IConnectionOrientedBackend
+    PriorityTier priority) : BackendBase(backendSpec, [], priority), IConnectionOrientedBackend
 {
     private enum State
     {
@@ -54,26 +58,21 @@ public abstract class HttpBackend(
         }
     }
 
-    private record Matcher(bool Negate, Regex Expression);
-
     private readonly StateManager<State> _state = new(State.Initial);
     private readonly Channel<ConnectionContext?> _channel = Channel.CreateUnbounded<ConnectionContext?>();
-    private readonly List<Matcher> _versionMatchers = [];
-    private readonly List<Matcher> _methodMatchers = [];
-    private readonly List<Matcher> _pathMatchers = [];
-    private readonly List<Matcher> _hostMatchers = [];
-    private readonly Dictionary<string, List<Matcher>> _headerMatchers = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, List<Matcher>> _propertyMatchers = [];
+    private Matcher<Regex>[] _versionMatchers = [];
+    private Matcher<Regex>[] _methodMatchers = [];
+    private Matcher<Regex>[] _pathMatchers = [];
+    private Matcher<Regex>[] _hostMatchers = [];
+    private IReadOnlyDictionary<string, IEnumerable<Matcher<Regex>>> _headerMatchers
+        = new Dictionary<string, IEnumerable<Matcher<Regex>>>();
 
     private IHost? _app;
 
     /// <summary>
     /// Logger for the backend.
     /// </summary>
-    protected ILogger Logger { get; } = loggerFactory.CreateLogger($"{backendSpec.ProtocolName}-backend");
-
-    /// <inheritdoc />
-    public BackendInfo Backend => new(backendSpec, new Dictionary<string, string>(), priority);
+    protected ILogger Logger => loggerFactory.CreateLogger($"{Backend.Spec.ProtocolName}-backend");
 
     /// <summary>
     /// Builds the <see cref="WebApplication"/>.
@@ -83,97 +82,36 @@ public abstract class HttpBackend(
     protected abstract WebApplication Build(WebApplicationBuilder builder);
 
     /// <inheritdoc />
-    public virtual async Task InitializeAsync(CancellationToken cancellationToken = default)
+    public override async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        ObjectDisposedException.ThrowIf(_state.Is(State.Dispose), nameof(HttpBackend));
+        ObjectDisposedException.ThrowIf(_state.Is(State.Dispose), nameof(HttpBackendBase));
 
         if (!_state.TryTransition(from: State.Initial, to: State.Starting))
         {
             throw new InvalidOperationException();
         }
 
-        if (backendSpec.Parameters.TryGetValue("protocol-version", out var versionMatchString))
-        {
-            versionMatchString = $"^(?:{versionMatchString.TrimStart('^').TrimEnd('$')})$";
-            _versionMatchers.Add(new(false, new(versionMatchString, RegexOptions.Compiled)));
-        }
-        else if (backendSpec.Parameters.TryGetValue("protocol-version!", out var negVersionMatchString))
-        {
-            negVersionMatchString = $"^(?:{negVersionMatchString.TrimStart('^').TrimEnd('$')})$";
-            _versionMatchers.Add(new(true, new(negVersionMatchString, RegexOptions.Compiled)));
-        }
-        if (backendSpec.Parameters.TryGetValue("method", out var methodMatchString))
-        {
-            methodMatchString = $"^(?:{methodMatchString.TrimStart('^').TrimEnd('$')})$";
-            _methodMatchers.Add(new(false, new(methodMatchString, RegexOptions.Compiled | RegexOptions.IgnoreCase)));
-        }
-        else if (backendSpec.Parameters.TryGetValue("method!", out var negMethodMatchString))
-        {
-            negMethodMatchString = $"^(?:{negMethodMatchString.TrimStart('^').TrimEnd('$')})$";
-            _methodMatchers.Add(new(true, new(negMethodMatchString, RegexOptions.Compiled | RegexOptions.IgnoreCase)));
-        }
-        if (backendSpec.Parameters.TryGetValue("path", out var pathMatchString))
-        {
-            pathMatchString = $"^(?:{pathMatchString.TrimStart('^').TrimEnd('$')})$";
-            _pathMatchers.Add(new(false, new(pathMatchString, RegexOptions.Compiled)));
-        }
-        if (backendSpec.Parameters.TryGetValue("path!", out var negPathMatchString))
-        {
-            negPathMatchString = $"^(?:{negPathMatchString.TrimStart('^').TrimEnd('$')})$";
-            _pathMatchers.Add(new(true, new(negPathMatchString, RegexOptions.Compiled)));
-        }
-        if (backendSpec.Parameters.TryGetValue("host", out var hostMatchString))
-        {
-            hostMatchString = $"^(?:{hostMatchString.TrimStart('^').TrimEnd('$')})$";
-            _hostMatchers.Add(new(false, new(hostMatchString, RegexOptions.Compiled)));
-        }
-        if (backendSpec.Parameters.TryGetValue("host!", out var negHostMatchString))
-        {
-            negHostMatchString = $"^(?:{negHostMatchString.TrimStart('^').TrimEnd('$')})$";
-            _hostMatchers.Add(new(true, new(negHostMatchString, RegexOptions.Compiled)));
-        }
-        foreach (var (name, values) in Backend.Spec.Parameters)
-        {
-            bool negate;
-            if (name.EndsWith(']'))
-            {
-                negate = false;
-            }
-            else if (name.EndsWith("]!"))
-            {
-                negate = true;
-            }
-            else
-            {
-                continue;
-            }
-            if (name.StartsWith("property["))
-            {
-                var property = name[9..^(negate ? 2 : 1)];
+        var matchers = Backend.Spec.GetMatchers();
 
-                if (!_propertyMatchers.TryGetValue(property, out var matchers))
-                {
-                    matchers = [];
-                    _propertyMatchers[property] = matchers;
-                }
-                matchers.AddRange(values
-                    .Split(';')
-                    .Select(value => new Matcher(negate, new(value, RegexOptions.Compiled))));
-            }
-            if (name.StartsWith("header["))
-            {
-                var header = name[7..^(negate ? 2 : 1)];
+        _versionMatchers = matchers.TryGetValue("protocol-version", out var versionMatcher)
+            ? [.. versionMatcher.AsMultiValue().AsRegex()]
+            : [];
 
-                if (!_headerMatchers.TryGetValue(header, out var matchers))
-                {
-                    matchers = [];
-                    _headerMatchers[header] = matchers;
-                }
-                matchers.AddRange(values
-                    .Split(';')
-                    .Select(value => new Matcher(negate, new(value, RegexOptions.Compiled))));
-            }
-        }
+        _methodMatchers = matchers.TryGetValue("method", out var methodMatcher)
+            ? [.. methodMatcher.AsMultiValue().AsRegex()]
+            : [];
+
+        _pathMatchers = matchers.TryGetValue("path", out var pathMatcher)
+            ? [.. pathMatcher.AsMultiValue().AsRegex()]
+            : [];
+
+        _hostMatchers = matchers.TryGetValue("host", out var hostMatcher)
+            ? [.. hostMatcher.AsMultiValue().AsRegex()]
+            : [];
+
+        _headerMatchers = matchers
+            .AsMultiValueIndexed("header")
+            .ToDictionary(kv => kv.Key, kv => kv.Value.AsRegex(), StringComparer.OrdinalIgnoreCase);
 
         try
         {
@@ -205,12 +143,14 @@ public abstract class HttpBackend(
                 {
                     task = Task.Run(async () =>
                     {
+                        Activity.Current = null;
+
                         using (Logger.BeginScope("{RemoteEndpoint}", new IPEndPoint(
                             context.Connection.RemoteIpAddress ?? IPAddress.Any,
                             context.Connection.RemotePort)))
                         using (Logger.BeginScope("{BackendName}:{BackendProtocol}",
-                            backendSpec.Name,
-                            backendSpec.ProtocolName))
+                            Backend.Spec.Name,
+                            Backend.Spec.ProtocolName))
                         {
                             Logger.LogTrace(
                                 "request received {Method} {PathAndQuery} - {{{RequestHeaders}}}",
@@ -255,21 +195,9 @@ public abstract class HttpBackend(
         IClientConnectionPreview clientPreview,
         CancellationToken cancellationToken = default)
     {
-        foreach (var (property, matchers) in _propertyMatchers)
+        if (!MatchesProperties(clientPreview.Properties))
         {
-            if (matchers is { Count: 0 })
-            {
-                continue;
-            }
-            var propertyExists = clientPreview.Properties.TryGetValue(property, out var value);
-
-            foreach (var matcher in matchers)
-            {
-                if ((propertyExists && matcher.Expression.IsMatch(value!)) == matcher.Negate)
-                {
-                    return false;
-                }
-            }
+            return false;
         }
 
         var preview = clientPreview.Ingress;
@@ -294,20 +222,20 @@ public abstract class HttpBackend(
                     return false;
             }
 
-            if (_versionMatchers.Any(m => m.Expression.IsMatch(version!) == m.Negate))
+            if (!_versionMatchers.HasMatch(r => r.IsMatch(version!)))
             {
                 return false;
             }
-            if (_methodMatchers.Any(m => m.Expression.IsMatch(method!) == m.Negate))
+            if (!_methodMatchers.HasMatch(r => r.IsMatch(method!)))
             {
                 return false;
             }
-            if (_pathMatchers.Any(m => m.Expression.IsMatch(path!) == m.Negate))
+            if (!_pathMatchers.HasMatch(r => r.IsMatch(path!)))
             {
                 return false;
             }
 
-            if (_hostMatchers.Any())
+            if (_hostMatchers.Length > 0)
             {
                 var hostExists = clientPreview.Properties.TryGetValue("tls.sni", out var host);
                 if (!hostExists)
@@ -324,15 +252,12 @@ public abstract class HttpBackend(
                     }
                     hostExists = values?.TryGetValue("host", out host) is true;
                 }
-                foreach (var matcher in _hostMatchers)
+                if (!_hostMatchers.HasMatch(r => hostExists && r.IsMatch(host!)))
                 {
-                    if ((hostExists && matcher.Expression.IsMatch(host!)) == matcher.Negate)
-                    {
-                        return false;
-                    }
+                    return false;
                 }
             }
-            if (_headerMatchers.Any())
+            if (_headerMatchers.Count > 0)
             {
                 var inspectHeaders = _headerMatchers.Keys.ToArray();
 
@@ -354,13 +279,9 @@ public abstract class HttpBackend(
                 {
                     var headerValue = default(string);
                     var headerExists = headers?.TryGetValue(header, out headerValue) is true;
-
-                    foreach (var matcher in matchers)
+                    if (!matchers.HasMatch(r => headerExists && r.IsMatch(headerValue!)))
                     {
-                        if ((headerExists && matcher.Expression.IsMatch(headerValue!)) == matcher.Negate)
-                        {
-                            return false;
-                        }
+                        return false;
                     }
                 }
             }
@@ -387,7 +308,8 @@ public abstract class HttpBackend(
         return new Connection(egressPipe.Reader, ingressPipe.Writer);
     }
 
-    async ValueTask IAsyncDisposable.DisposeAsync()
+    /// <inheritdoc />
+    public override async ValueTask DisposeAsync()
     {
         GC.SuppressFinalize(this);
 

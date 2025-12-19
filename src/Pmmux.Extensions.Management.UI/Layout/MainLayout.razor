@@ -1,0 +1,108 @@
+@inherits LayoutComponentBase
+@using Pmmux.Extensions.Management.UI.Services
+@inject PmmuxApiClient ApiClient
+
+<div class="app">
+  <header class="app-header">
+    <div class="app-header__brand">
+      <h1 class="app-header__title">pmmux</h1>
+      <span class="app-header__subtitle">Port Map Multiplexer</span>
+    </div>
+    <div class="app-header__status">
+      <span class="connection-status @(isConnected == null ? "" : isConnected.Value ? "connected" : "disconnected")">
+        <span class="connection-status__dot"></span>
+        @(isConnected == null ? "Connecting..." : isConnected.Value ? "Connected" : "Disconnected")
+      </span>
+    </div>
+  </header>
+
+  <nav class="app-nav">
+    <NavLink href="/" Match="NavLinkMatch.All" class="nav-tab" ActiveClass="nav-tab--active">
+      <span class="nav-tab__icon">
+        <i class="ph ph-hard-drives"></i>
+      </span>
+      <span class="nav-tab__label">Backends</span>
+    </NavLink>
+    <NavLink href="/health-checks" class="nav-tab" ActiveClass="nav-tab--active">
+      <span class="nav-tab__icon">
+        <i class="ph ph-heartbeat"></i>
+      </span>
+      <span class="nav-tab__label">Health Checks</span>
+    </NavLink>
+    <NavLink href="/listeners" class="nav-tab" ActiveClass="nav-tab--active">
+      <span class="nav-tab__icon">
+        <i class="ph ph-broadcast"></i>
+      </span>
+      <span class="nav-tab__label">Listeners</span>
+    </NavLink>
+    <NavLink href="/port-maps" class="nav-tab" ActiveClass="nav-tab--active">
+      <span class="nav-tab__icon">
+        <i class="ph ph-arrows-split"></i>
+      </span>
+      <span class="nav-tab__label">Port Forwarding</span>
+    </NavLink>
+    <NavLink href="/tls" class="nav-tab" ActiveClass="nav-tab--active">
+      <span class="nav-tab__icon">
+        <i class="ph ph-shield-check"></i>
+      </span>
+      <span class="nav-tab__label">TLS</span>
+    </NavLink>
+  </nav>
+
+  <main class="app-main">
+    @if (isConnected == false)
+    {
+      <div class="connection-error">
+        <div class="connection-error__icon">
+          <i class="ph ph-warning-circle"></i>
+        </div>
+        <h2 class="connection-error__title">Unable to connect to pmmux</h2>
+        <p class="connection-error__description">
+          Ensure pmmux is running and the management API is enabled.
+        </p>
+        <button class="btn btn--primary" @onclick="CheckConnection">
+          <i class="ph ph-arrow-clockwise"></i>
+          Retry
+        </button>
+      </div>
+    }
+    else
+    {
+      <div class="app-content">
+        @Body
+      </div>
+    }
+  </main>
+</div>
+
+@code {
+  private bool? isConnected = null;
+  private System.Timers.Timer? connectionCheckTimer;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await CheckConnection();
+    StartConnectionCheck();
+  }
+
+  private async Task CheckConnection()
+  {
+    isConnected = await ApiClient.HealthCheckAsync();
+    await InvokeAsync(StateHasChanged);
+  }
+
+  private void StartConnectionCheck()
+  {
+    connectionCheckTimer = new System.Timers.Timer(10000);
+    connectionCheckTimer.Elapsed += async (sender, e) =>
+    {
+      await CheckConnection();
+    };
+    connectionCheckTimer.Start();
+  }
+
+  public void Dispose()
+  {
+    connectionCheckTimer?.Dispose();
+  }
+}

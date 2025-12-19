@@ -25,7 +25,7 @@ public sealed class HttpProxyBackend(
     BackendSpec backendSpec,
     ILoggerFactory loggerFactory,
     PriorityTier priorityTier = PriorityTier.Normal)
-    : HttpBackend(backendSpec, loggerFactory, priorityTier), IHealthCheckBackend
+    : HttpBackendBase(backendSpec, loggerFactory, priorityTier), IHealthCheckBackend
 {
 
     /// <summary>

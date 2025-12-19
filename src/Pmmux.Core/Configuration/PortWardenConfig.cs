@@ -15,7 +15,12 @@ public record PortWardenConfig
     /// <param name="NetworkProtocol">Network protocol (TCP or UDP) for the port mapping.</param>
     /// <param name="LocalPort">Local port to map.</param>
     /// <param name="PublicPort">Public port to request on the NAT device.</param>
-    public record PortMapConfig(Protocol NetworkProtocol, int? LocalPort = null, int? PublicPort = null);
+    /// <param name="Index">The index that correlates this mapping to a listener binding configuration.</param>
+    public record PortMapConfig(
+        Protocol NetworkProtocol,
+        int? LocalPort = null,
+        int? PublicPort = null,
+        int? Index = null);
 
     /// <summary>List of port mappings to create.</summary>
     public IEnumerable<PortMapConfig> PortMaps { get; init; } = [];

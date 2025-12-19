@@ -1,11 +1,12 @@
 # Management Extension
 
-The Management extension provides a REST API for runtime management of pmmux, including backends, health checks, and port mappings.
+The Management extension provides a REST API for runtime management of pmmux, including backends, health checks, listeners, and port mappings.
 
 ## Features
 
 - **Runtime Configuration** - Add, update, and remove backends without restart
 - **Health Check Management** - Configure health checks dynamically
+- **Listener Management** - Add and remove listeners at runtime
 - **Port Mapping Control** - Manage NAT port mappings via API
 - **Extensible API** - Other extensions can add custom endpoints
 - **OpenAPI Documentation** - Auto-generated API specification
@@ -33,6 +34,7 @@ Option | Default | Description
 `--management-enable` | `false` | Enable management API
 `--management-port` | `8900` | API port
 `--management-bind-address` | `127.0.0.1` | Bind address
+`--management-ui-enable` | `false` | Enable web UI (see [Web UI](#web-ui))
 
 ### Example
 
@@ -45,6 +47,10 @@ pmmux \
 ```
 
 > **Security Note:** By default, the management API binds to `127.0.0.1` (localhost only). Use caution when exposing it on `0.0.0.0` - consider using a firewall or reverse proxy with authentication.
+
+## Web UI
+
+When enabled with `--management-ui-enable`, a web-based management interface is available at `http://<bind-address>:<port>/` for managing backends, health checks, listeners, port maps, and TLS certificates (if the TLS extension is loaded).
 
 ## API Endpoints
 
@@ -64,7 +70,7 @@ Method | Endpoint | Description
 ```sh
 curl -X POST "http://localhost:8900/api/backends/pass/web?networkProtocol=Tcp" \
   -H "Content-Type: application/json" \
-  -d '{"ip": "127.0.0.1", "port": "3000"}'
+  -d '{"target.ip": "127.0.0.1", "target.port": "3000"}'
 ```
 
 #### List Backends
@@ -93,6 +99,45 @@ curl -X POST "http://localhost:8900/api/health-checks" \
       "interval": "5000",
       "timeout": "2000"
     }
+  }'
+```
+
+### Listeners
+
+Method | Endpoint | Description
+-|-|-
+`GET` | `/listeners` | List all listeners
+`POST` | `/listeners` | Add a listener
+`DELETE` | `/listeners` | Remove a listener
+
+#### Add Listener
+
+```sh
+curl -X POST "http://localhost:8900/api/listeners" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "networkProtocol": "Tcp",
+    "port": 8080,
+    "bindAddress": "0.0.0.0"
+  }'
+```
+
+The `bindAddress` field is optional and defaults to `0.0.0.0` (all interfaces).
+
+#### List Listeners
+
+```sh
+curl "http://localhost:8900/api/listeners"
+```
+
+#### Remove Listener
+
+```sh
+curl -X DELETE "http://localhost:8900/api/listeners" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "networkProtocol": "Tcp",
+    "port": 8080
   }'
 ```
 
@@ -132,13 +177,13 @@ Extensions can add custom API endpoints to the management server. See the [Progr
 # Start pmmux with management enabled
 pmmux \
   --management-enable \
-  -b "primary:pass:ip=127.0.0.1,port=3000" \
+  -b "primary:pass:target.ip=127.0.0.1,target.port=3000" \
   -p 8080:8080:tcp
 
 # Add a secondary backend at runtime
 curl -X POST "http://localhost:8900/api/backends/pass/secondary?networkProtocol=Tcp" \
   -H "Content-Type: application/json" \
-  -d '{"ip": "127.0.0.1", "port": "3001", "priority": "standby"}'
+  -d '{"target.ip": "127.0.0.1", "target.port": "3001", "priority": "standby"}'
 
 # Check backends
 curl "http://localhost:8900/api/backends?networkProtocol=Tcp"

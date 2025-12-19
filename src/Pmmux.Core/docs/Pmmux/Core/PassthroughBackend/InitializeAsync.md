@@ -15,7 +15,7 @@
 Initialize the backend with the client writer factory\.
 
 ```csharp
-public virtual System.Threading.Tasks.Task InitializeAsync(Pmmux.Abstractions.IClientWriterFactory clientWriterFactory, System.Threading.CancellationToken cancellationToken=default(System.Threading.CancellationToken));
+public System.Threading.Tasks.Task InitializeAsync(Pmmux.Abstractions.IClientWriterFactory clientWriterFactory, System.Threading.CancellationToken cancellationToken=default(System.Threading.CancellationToken));
 ```
 #### Parameters
 
@@ -48,7 +48,7 @@ to send responses back to clients\.
 Initialize the backend at startup\.
 
 ```csharp
-public virtual System.Threading.Tasks.Task InitializeAsync(System.Threading.CancellationToken cancellationToken=default(System.Threading.CancellationToken));
+public override System.Threading.Tasks.Task InitializeAsync(System.Threading.CancellationToken cancellationToken=default(System.Threading.CancellationToken));
 ```
 #### Parameters
 

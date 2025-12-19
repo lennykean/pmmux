@@ -1,3 +1,5 @@
+using Pmmux.Extensions.Tls.Abstractions;
+
 namespace Pmmux.Extensions.Tls;
 
 /// <summary>Configuration for a TLS certificate.</summary>

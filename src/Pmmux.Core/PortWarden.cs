@@ -37,7 +37,7 @@ public sealed class PortWarden(
     }
 
     private readonly StateManager<State> _state = new(State.Initial);
-    private readonly ConcurrentDictionary<Mapping, (Task RenewalWorker, Mapping Mapping)> _portMaps = [];
+    private readonly ConcurrentDictionary<Mapping, (Task RenewalWorker, Mapping Requested, int? Index)> _portMaps = [];
     private readonly TaskCompletionSource<bool> _disposedTcs = new();
     private readonly CancellationTokenSource _workerCts = new();
     private readonly ILogger _logger = loggerFactory.CreateLogger("port-warden");
@@ -50,10 +50,8 @@ public sealed class PortWarden(
     /// <inheritdoc />
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        if (config is null)
-        {
-            throw new ArgumentNullException(nameof(config));
-        }
+        ArgumentNullException.ThrowIfNull(config);
+
         if (!_state.TryTransition(to: State.Starting, from: State.Initial))
         {
             throw new InvalidOperationException();
@@ -91,6 +89,7 @@ public sealed class PortWarden(
                         portMapConfig.NetworkProtocol,
                         portMapConfig.LocalPort,
                         portMapConfig.PublicPort,
+                        portMapConfig.Index,
                         linkedCts.Token).WithTimeout(timeoutCts.Token).ConfigureAwait(false);
 
                     _logger.LogInformation(
@@ -125,21 +124,20 @@ public sealed class PortWarden(
     /// <inheritdoc />
     public IEnumerable<PortMapInfo> GetPortMaps()
     {
-        if (_state.Is(State.Dispose))
-        {
-            throw new ObjectDisposedException(nameof(PortWarden));
-        }
+        ObjectDisposedException.ThrowIf(_state.Is(State.Dispose), nameof(PortWarden));
+
         if (!_state.Is(State.Started))
         {
             throw new InvalidOperationException();
         }
         return [.. (
-            from portMap in _portMaps.Keys
+            from entry in _portMaps
             select new PortMapInfo(
-                portMap.Protocol,
-                new(NatDevice?.PublicAddress ?? IPAddress.None, portMap.PublicPort),
-                portMap.PrivatePort,
-                NatDevice!.NatProtocol))];
+                entry.Key.Protocol,
+                new(NatDevice?.PublicAddress ?? IPAddress.None, entry.Key.PublicPort),
+                entry.Key.PrivatePort,
+                NatDevice!.NatProtocol,
+                entry.Value.Index))];
     }
 
     /// <inheritdoc />
@@ -149,10 +147,8 @@ public sealed class PortWarden(
         int? publicPort,
         CancellationToken cancellationToken = default)
     {
-        if (_state.Is(State.Dispose))
-        {
-            throw new ObjectDisposedException(nameof(PortWarden));
-        }
+        ObjectDisposedException.ThrowIf(_state.Is(State.Dispose), nameof(PortWarden));
+
         if (!_state.Is(State.Started) || _natDevice is null)
         {
             throw new InvalidOperationException();
@@ -163,7 +159,7 @@ public sealed class PortWarden(
         {
             throw new ArgumentException($"port map conflict");
         }
-        return AddPortMapInternalAsync(networkProtocol, localPort, publicPort, cancellationToken);
+        return AddPortMapInternalAsync(networkProtocol, localPort, publicPort, index: null, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -173,19 +169,19 @@ public sealed class PortWarden(
         int publicPort,
         CancellationToken cancellationToken = default)
     {
-        if (_state.Is(State.Dispose))
-        {
-            throw new ObjectDisposedException(nameof(PortWarden));
-        }
+        ObjectDisposedException.ThrowIf(_state.Is(State.Dispose), nameof(PortWarden));
+
         if (!_state.Is(State.Started) || _natDevice is null)
         {
             throw new InvalidOperationException();
         }
-        if (!_portMaps.TryGetValue(new(networkProtocol, localPort, publicPort), out var portMap))
+        var actualPortMap = new Mapping(networkProtocol, localPort, publicPort);
+
+        if (!_portMaps.TryGetValue(actualPortMap, out var portMap))
         {
             return Task.FromResult(false);
         }
-        return RemovePortMapInternalAsync(portMap.Mapping, cancellationToken);
+        return RemovePortMapInternalAsync(actualPortMap, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -236,78 +232,85 @@ public sealed class PortWarden(
 
     private async Task StartRenewalWorkerAsync(Mapping portMap)
     {
-        _logger.LogTrace("portmap renewal worker starting");
+        using (_logger.BeginScope("{NetworkProtocol} {PublicPort}>{LocalPort}",
+            portMap.Protocol,
+            portMap.PublicPort,
+            portMap.PrivatePort))
+        {
+            _logger.LogTrace("port map renewal worker starting");
 
-        var metadata = new Dictionary<string, string?>
-        {
-            ["protocol"] = portMap.Protocol.ToString(),
-            ["local_port"] = portMap.PrivatePort.ToString(),
-            ["public_port"] = portMap.PublicPort.ToString()
-        };
-        while (config is not null && _natDevice is not null && !_workerCts.IsCancellationRequested)
-        {
-            try
+            var metadata = new Dictionary<string, string?>
             {
-                var delay = portMap.Expiration - DateTimeOffset.UtcNow;
-                var maxDelay = TimeSpan.FromSeconds(portMap.Lifetime) - config.RenewalLead;
-                var actualDelay = delay.Clamp(TimeSpan.FromSeconds(5), maxDelay);
-
-                _logger.LogTrace("port map renewing in {Delay}", actualDelay);
-
-                await Task.Delay(actualDelay, _workerCts.Token).ConfigureAwait(false);
-
-                if (!_portMaps.TryGetValue(portMap, out var existingPortMap))
+                ["protocol"] = portMap.Protocol.ToString(),
+                ["local_port"] = portMap.PrivatePort.ToString(),
+                ["public_port"] = portMap.PublicPort.ToString()
+            };
+            while (config is not null && _natDevice is not null && !_workerCts.IsCancellationRequested)
+            {
+                try
                 {
-                    _logger.LogDebug("portmap removed, stopping renewal");
-                    break;
+                    var delay = portMap.Expiration - DateTimeOffset.UtcNow;
+                    var maxDelay = TimeSpan.FromSeconds(portMap.Lifetime) - config.RenewalLead;
+                    var actualDelay = delay.Clamp(TimeSpan.FromSeconds(5), maxDelay);
+
+                    _logger.LogTrace("port map renewing in {Delay}", actualDelay);
+
+                    await Task.Delay(actualDelay, _workerCts.Token).ConfigureAwait(false);
+
+                    if (!_portMaps.TryGetValue(portMap, out var existingPortMap))
+                    {
+                        _logger.LogDebug("port map removed, stopping renewal");
+                        break;
+                    }
+
+                    using var timeoutCts = new CancellationTokenSource(config.Timeout);
+
+                    var requestedPortMap = new Mapping(
+                        protocol: portMap.Protocol,
+                        privatePort: portMap.PrivatePort,
+                        publicPort: portMap.PublicPort,
+                        lifetime: (int)(config.Lifetime?.TotalSeconds ?? 0),
+                        description: $"pmmux-{portMap.Protocol}".ToLowerInvariant());
+
+                    var updatedPortMap = await metricReporter.MeasureDurationAsync(
+                        "portmap.renew.duration",
+                        "port-warden",
+                        metadata,
+                        async () => await _natDevice.CreatePortMapAsync(requestedPortMap)
+                            .WithCancellation(_workerCts.Token)
+                            .WithTimeout(timeoutCts.Token)
+                            .ConfigureAwait(false)).ConfigureAwait(false);
+
+                    _portMaps[portMap] = (existingPortMap.RenewalWorker, updatedPortMap, existingPortMap.Index);
+                    portMap = updatedPortMap;
+
+                    metricReporter.ReportEvent("portmap.renewed", "port-warden", metadata);
+
+                    eventSender.RaisePortMapChanged(this, portMap);
+
+                    var natDeviceInfo = _natDevice.DeviceInfo();
+
+                    _logger.LogDebug("port map renewed (exp: {Expiration:s})", portMap.Expiration.ToUniversalTime());
                 }
-
-                using var timeoutCts = new CancellationTokenSource(config.Timeout);
-
-                var requestedPortMap = new Mapping(
-                    protocol: portMap.Protocol,
-                    privatePort: portMap.PrivatePort,
-                    publicPort: portMap.PublicPort,
-                    lifetime: (int)(config.Lifetime?.TotalSeconds ?? 0),
-                    description: $"pmmux-{portMap.Protocol}".ToLowerInvariant());
-
-                var updatedPortMap = await metricReporter.MeasureDurationAsync(
-                    "portmap.renew.duration",
-                    "port-warden",
-                    metadata,
-                    async () => await _natDevice.CreatePortMapAsync(requestedPortMap)
-                        .WithCancellation(_workerCts.Token)
-                        .WithTimeout(timeoutCts.Token)
-                        .ConfigureAwait(false)).ConfigureAwait(false);
-
-                _portMaps[portMap] = existingPortMap with { Mapping = updatedPortMap };
-                portMap = updatedPortMap;
-
-                metricReporter.ReportEvent("portmap.renewed", "port-warden", metadata);
-
-                eventSender.RaisePortMapChanged(this, portMap);
-
-                var natDeviceInfo = _natDevice.DeviceInfo();
-
-                _logger.LogDebug("portmap renewed (exp: {Expiration:s})", portMap.Expiration.ToUniversalTime());
+                catch (OperationCanceledException)
+                {
+                }
+                catch (Exception ex)
+                {
+                    metricReporter.ReportEvent("portmap.renew.error", "port-warden", metadata);
+                    _logger.LogWarning(ex, "renewal worker error");
+                }
             }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception ex)
-            {
-                metricReporter.ReportEvent("portmap.renew.error", "port-warden", metadata);
-                _logger.LogWarning(ex, "renewal worker error");
-            }
+
+            _logger.LogTrace("renewal worker stopped");
         }
-
-        _logger.LogTrace("renewal worker stopped");
     }
 
     private async Task<PortMapInfo?> AddPortMapInternalAsync(
        Protocol networkProtocol,
        int? localPort,
        int? publicPort,
+       int? index,
        CancellationToken cancellationToken = default)
     {
         if (_natDevice is null)
@@ -321,59 +324,64 @@ public sealed class PortWarden(
             ["local_port"] = localPort?.ToString(),
             ["public_port"] = publicPort?.ToString()
         };
-        using (_logger.BeginScope("{NetworkProtocol} {PublicPort}>{LocalPort}", networkProtocol, publicPort, localPort))
+        _logger.LogTrace("mapping {NetworkProtocol} {PublicPort}>{LocalPort}", networkProtocol, publicPort, localPort);
+
+        Mapping? portMap = null;
+        try
         {
-            _logger.LogTrace("port is being mapped");
+            var natDeviceInfo = _natDevice.DeviceInfo();
 
-            Mapping? portMap = null;
-            try
+            var requestedPortMap = new Mapping(
+                networkProtocol,
+                localPort ?? 0,
+                publicPort ?? 0,
+                (int)(config.Lifetime?.TotalSeconds ?? 0),
+                $"pmmux-{networkProtocol}".ToLowerInvariant());
+
+            portMap = await metricReporter.MeasureDurationAsync(
+               "portmap.create.duration",
+               "port-warden",
+               metadata,
+               async () => await _natDevice.CreatePortMapAsync(requestedPortMap)
+                   .WithCancellation(cancellationToken)
+                   .ConfigureAwait(false)).ConfigureAwait(false);
+
+            _portMaps.AddOrUpdate(portMap,
+                p => (StartRenewalWorkerAsync(p), p, index),
+                (_, _) => throw new InvalidOperationException("port map conflict"));
+
+            metricReporter.ReportEvent("portmap.created", "port-warden", metadata);
+            _logger.LogDebug("mapped {NetworkProtocol} port {PublicPort}>{LocalPort} (exp: {Expiration:s})",
+                portMap.Protocol,
+                portMap.PublicPort,
+                portMap.PrivatePort,
+                portMap.Expiration.ToUniversalTime());
+
+            eventSender.RaisePortMapAdded(this, portMap);
+
+            return new(
+                portMap.Protocol,
+                new(natDeviceInfo.PublicAddress, portMap.PublicPort),
+                portMap.PrivatePort,
+                natDeviceInfo.NatProtocol,
+                index);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "error mapping {NetworkProtocol} port {PublicPort}>{LocalPort}",
+                networkProtocol,
+                publicPort,
+                localPort);
+
+            metricReporter.ReportEvent("portmap.add.error", "port-warden", new(metadata)
             {
-                var natDeviceInfo = _natDevice.DeviceInfo();
-
-                var requestedPortMap = new Mapping(
-                    networkProtocol,
-                    localPort ?? 0,
-                    publicPort ?? 0,
-                    (int)(config.Lifetime?.TotalSeconds ?? 0),
-                    $"pmmux-{networkProtocol}".ToLowerInvariant());
-
-                portMap = await metricReporter.MeasureDurationAsync(
-                   "portmap.create.duration",
-                   "port-warden",
-                   metadata,
-                   async () => await _natDevice.CreatePortMapAsync(requestedPortMap)
-                       .WithCancellation(cancellationToken)
-                       .ConfigureAwait(false)).ConfigureAwait(false);
-
-                _portMaps.AddOrUpdate(portMap,
-                    p => (StartRenewalWorkerAsync(p), p),
-                    (_, _) => throw new InvalidOperationException("port map conflict"));
-
-                metricReporter.ReportEvent("portmap.created", "port-warden", metadata);
-                _logger.LogDebug("port mapped (exp: {Expiration:s})", portMap.Expiration.ToUniversalTime());
-
-                eventSender.RaisePortMapAdded(this, portMap);
-
-                return new(
-                    portMap.Protocol,
-                    new(natDeviceInfo.PublicAddress, portMap.PublicPort),
-                    portMap.PrivatePort,
-                    natDeviceInfo.NatProtocol);
-            }
-            catch (Exception ex)
+                ["error"] = ex.GetType().Name
+            });
+            if (portMap is not null)
             {
-                _logger.LogError(ex, "port mapping error");
-
-                metricReporter.ReportEvent("portmap.add.error", "port-warden", new(metadata)
-                {
-                    ["error"] = ex.GetType().Name
-                });
-                if (portMap is not null)
-                {
-                    await RemovePortMapInternalAsync(portMap, cancellationToken).ConfigureAwait(false);
-                }
-                throw;
+                await RemovePortMapInternalAsync(portMap, cancellationToken).ConfigureAwait(false);
             }
+            throw;
         }
     }
 

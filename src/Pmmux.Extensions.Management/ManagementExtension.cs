@@ -20,6 +20,11 @@ public sealed class ManagementExtension : IExtension
         Description = "enable management API",
     };
 
+    internal Option<bool> UiEnableOption { get; } = new("--management-ui-enable")
+    {
+        Description = "enable management web UI",
+    };
+
     internal Option<int> PortOption { get; } = new("--management-port")
     {
         Description = "management API port",
@@ -35,6 +40,7 @@ public sealed class ManagementExtension : IExtension
     void IExtension.RegisterCommandOptions(ICommandLineBuilder builder)
     {
         builder.Add(EnableOption);
+        builder.Add(UiEnableOption);
         builder.Add(PortOption);
         builder.Add(BindAddressOption);
     }
@@ -51,6 +57,7 @@ public sealed class ManagementExtension : IExtension
             return new ManagementConfig
             {
                 ManagementEnable = section.GetValue<bool>(EnableOption.Name),
+                ManagementUiEnable = section.GetValue<bool>(UiEnableOption.Name),
                 ManagementPort = section.GetValue<int>(PortOption.Name),
                 ManagementBindAddress = bindAddress
             };

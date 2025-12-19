@@ -7,7 +7,7 @@ using System.ServiceProcess;
 
 namespace Pmmux.App;
 
-internal class InstallCommand : Command
+internal sealed class InstallCommand : Command
 {
     public Option<string?> ArgumentsOption { get; } = new("--arguments", "-a")
     {

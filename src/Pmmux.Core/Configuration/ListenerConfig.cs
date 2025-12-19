@@ -13,10 +13,16 @@ public record ListenerConfig
     /// </summary>
     /// <param name="NetworkProtocol">Network protocol (TCP or UDP) for the binding.</param>
     /// <param name="Port">Local port number to bind the listener to.</param>
-    public record BindingConfig(Protocol NetworkProtocol, int Port);
+    /// <param name="Index">The index that correlates this binding to a port map configuration.</param>
+    /// <param name="BindAddress">The IP address to bind the listener to.</param>
+    /// <param name="Listen">Whether the multiplexer should create a listener for this binding.</param>
+    public record BindingConfig(
+        Protocol NetworkProtocol,
+        int? Port,
+        int? Index = null,
+        IPAddress? BindAddress = null,
+        bool Listen = true);
 
-    /// <summary>IP address to bind listeners to.</summary>
-    public IPAddress BindAddress { get; init; } = IPAddress.Any;
     /// <summary>List of port bindings for the listener.</summary>
     public IEnumerable<BindingConfig> PortBindings { get; init; } = [];
     /// <summary>Maximum queue length for incoming connections.</summary>

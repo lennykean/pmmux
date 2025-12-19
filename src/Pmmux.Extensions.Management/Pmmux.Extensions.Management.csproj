@@ -4,6 +4,8 @@
     <Nullable>enable</Nullable>
     <AssemblyName>$(MSBuildProjectName)</AssemblyName>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
+    <BlazorUIPublishDir>..\Pmmux.Extensions.Management.UI\bin\$(Configuration)\net10.0\publish\wwwroot\</BlazorUIPublishDir>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,10 +19,23 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Pmmux.Abstractions\Pmmux.Abstractions.csproj" />
     <ProjectReference Include="..\Pmmux.Extensions.Management.Abstractions\Pmmux.Extensions.Management.Abstractions.csproj" />
+    <ProjectReference Include="..\Pmmux.Extensions.Management.UI\Pmmux.Extensions.Management.UI.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <Targets>Publish</Targets>
+    </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="$(BlazorUIPublishDir)**\*.*" Condition="Exists('$(BlazorUIPublishDir)')">
+      <Link>wwwroot\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </EmbeddedResource>
   </ItemGroup>
 </Project>

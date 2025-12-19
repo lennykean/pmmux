@@ -120,23 +120,13 @@ error:http-response:response.status=503,response.body="Service Unavailable",resp
 health:http-response:path=/health,response.status=200,response.body="OK"
 ```
 
-## Request Matching
+## Standard Backend Parameters
 
-Both protocols support matching parameters to route specific requests.
-
-### Connection Properties
-
-Property values are matched using **regular expressions**.
-
-Parameter | Description
--|-
-`property[tls]` | Match TLS connections (`true`/`false`)
-`property[tls.sni]` | Match SNI hostname
-`property[key]!` | Negated match
+Both `http-proxy` and `http-response` backends support standard matching and routing parameters, including connection properties, IP/port matching, and priority tiers. See the [Configuration Guide](../../docs/configuration.md#common-parameters) for details on these parameters.
 
 ### HTTP Request Matching
 
-All matching parameters use **regular expressions**.
+In addition to standard parameters, both protocols support HTTP-specific matching. All matching parameters use **regular expressions**.
 
 Parameter | Description
 -|-

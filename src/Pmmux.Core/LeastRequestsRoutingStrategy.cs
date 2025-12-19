@@ -81,7 +81,7 @@ internal sealed class LeastRequestsRoutingStrategy : IRoutingStrategy, IDisposab
         _backends.Clear();
     }
 
-    private void OnBackendAdded(object sender, BackendSpec e)
+    private void OnBackendAdded(object? sender, BackendSpec e)
     {
         _backends.Clear();
     }

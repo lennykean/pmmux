@@ -13,7 +13,6 @@ using Microsoft.Extensions.Hosting;
 using Mono.Nat;
 
 using Pmmux.Abstractions;
-using Pmmux.Core;
 using Pmmux.Core.Configuration;
 
 using static Pmmux.Abstractions.CompactConfig;
@@ -41,16 +40,6 @@ internal class MultiplexerCommand : RootCommand
         Add(BindTimeoutOption);
         Add(PreviewSizeLimitOption);
         Add(QueueLengthOption);
-        Add(MuxOnlyOption);
-        Add(PortmapOnlyOption);
-
-        Validators.Add(result =>
-        {
-            if (result.GetValue(MuxOnlyOption) && result.GetValue(PortmapOnlyOption))
-            {
-                result.AddError($"{MuxOnlyOption.Name} and {PortmapOnlyOption.Name} cannot be used together");
-            }
-        });
 
         SetAction(ExecuteAsync);
     }
@@ -64,10 +53,12 @@ internal class MultiplexerCommand : RootCommand
 
             examples:
             # passthrough backend named web that forwards to local port 3000
-            -b web:pass:ip=127.0.0.1,port=3000
+            -b web:pass:target.ip=127.0.0.1,target.port=3000
 
             # multiple passthrough backends for load balancing with a noop fallthrough
-            -b api1:pass:ip=127.0.0.1,port=5001 -b api2:pass:ip=127.0.0.1,port=5002 -b blackhole:noop
+            -b api1:pass:target.ip=127.0.0.1,target.port=5001 \
+            -b api2:pass:target.ip=127.0.0.1,target.port=5002 \
+            -b blackhole:noop
 
             # a custom-protocol backend named service with custom parameters
             -b service:custom-protocol:host="service1.example.com",api-key="example"
@@ -79,11 +70,15 @@ internal class MultiplexerCommand : RootCommand
         Description =
             """
             port binding specification(s)
-            format: <public-port>:<local-port>:<network-protocol?>
+            format: <public-port>:<local-port>:<network-protocol?>:<parameters?>
 
             ! for public port disables NAT port mapping for that binding
             ? for ports indicates automatic assignment, if supported by the NAT device
             omitting the network protocol enables both TCP and UDP
+
+            parameters:
+            - bind-address=<ip>   IP address to bind the listener to (default: 0.0.0.0)
+            - listen=<bool>       whether the multiplexer listens on this port (default: true)
 
             examples:
             # bind public port 80 to local port 8080 using TCP (with NAT mapping)
@@ -95,8 +90,11 @@ internal class MultiplexerCommand : RootCommand
             # bind an automatically assigned public port to local port 22 using TCP
             -p ?:22:tcp
 
-            # bind an automatically assigned public port to an automatically assigned local port using both TCP and UDP
-            -p ?:?
+            # bind to a specific ip address
+            -p 80:8080:tcp:bind-address=192.168.1.100
+
+            # NAT mapping only, no multiplexer listener (another process listens)
+            -p 443:443:tcp:listen=false
 
             """
             ,
@@ -205,18 +203,6 @@ internal class MultiplexerCommand : RootCommand
         DefaultValueFactory = _ => 100
     };
 
-    public static Option<bool> MuxOnlyOption { get; } = new("--mux-only")
-    {
-        Description = "multiplexer only, ports will not be mapped",
-        DefaultValueFactory = _ => false
-    };
-
-    public static Option<bool> PortmapOnlyOption { get; } = new("--portmap-only")
-    {
-        Description = "port mapping only, multiplexer will be disabled",
-        DefaultValueFactory = _ => false
-    };
-
     public void AddRange(IEnumerable<Option> options)
     {
         foreach (var option in options)
@@ -248,7 +234,7 @@ internal class MultiplexerCommand : RootCommand
                 services.AddPmmux(
                     hostContext,
                     () => ResolveListenerConfig(hostContext.Configuration),
-                    () => ResolvePortMapperConfig(hostContext.Configuration),
+                    () => ResolvePortWardenConfig(hostContext.Configuration),
                     () => ResolveRouterConfig(hostContext.Configuration),
                     _extensions);
 
@@ -265,13 +251,9 @@ internal class MultiplexerCommand : RootCommand
     {
         var section = configuration.GetSection(ConfigurationLoader.ROOT_KEY);
 
-        var portBindings = section.GetSection(PortBindingsOption.Name).GetChildren();
+        var portBindings = section.GetSection(PortBindingsOption.Name).GetChildren().ToArray();
         var queueLength = section.GetValue<int>(QueueLengthOption.Name);
-        var portmapOnly = section.GetValue<bool>(PortmapOnlyOption.Name);
-
-        var bindings = portmapOnly
-            ? []
-            : portBindings.SelectMany(s => ParsePortBinding(s.Get<string>(), portmapOnly)).ToArray();
+        var bindings = portBindings.SelectMany((s, index) => ParsePortBinding(s.Get<string>(), index)).ToArray();
 
         return new()
         {
@@ -280,28 +262,25 @@ internal class MultiplexerCommand : RootCommand
         };
     }
 
-    private static PortWardenConfig ResolvePortMapperConfig(IConfiguration configuration)
+    private static PortWardenConfig ResolvePortWardenConfig(IConfiguration configuration)
     {
         var section = configuration.GetSection(ConfigurationLoader.ROOT_KEY);
 
-        var portBindings = section.GetSection(PortBindingsOption.Name).GetChildren();
+        var portBindings = section.GetSection(PortBindingsOption.Name).GetChildren().ToArray();
         var portMapProtocol = section.GetValue<NatProtocol?>(PortMapProtocolOption.Name);
-        var gatewayIp = section.GetValue<IPAddress?>(GatewayIpOption.Name);
+        var gatewayIp = section.GetValue<string?>(GatewayIpOption.Name);
         var networkInterface = section.GetValue<string?>(NetworkInterfaceOption.Name);
         var portMapLifetime = section.GetValue<int?>(PortMapLifetimeOption.Name);
         var portMapRenewalLead = section.GetValue<int>(PortMapRenewalLeadOption.Name);
         var bindTimeout = section.GetValue<int>(BindTimeoutOption.Name);
-        var muxOnly = section.GetValue<bool>(MuxOnlyOption.Name);
 
-        var portMaps = muxOnly
-            ? []
-            : portBindings.SelectMany(s => ParsePortMaps(s.Get<string>(), muxOnly)).ToArray();
+        var portMaps = portBindings.SelectMany((s, index) => ParsePortMaps(s.Get<string>(), index)).ToArray();
 
         return new()
         {
             PortMaps = portMaps,
             NatProtocol = portMapProtocol,
-            GatewayAddress = gatewayIp ?? IPAddress.Any,
+            GatewayAddress = gatewayIp is not null ? IPAddress.Parse(gatewayIp) : IPAddress.Any,
             NetworkInterface = networkInterface,
             Lifetime = portMapLifetime is not null ? TimeSpan.FromSeconds(portMapLifetime.Value) : null,
             RenewalLead = TimeSpan.FromSeconds(portMapRenewalLead),
@@ -425,12 +404,10 @@ internal class MultiplexerCommand : RootCommand
         return healthCheckSpec;
     }
 
-    private static IEnumerable<ListenerConfig.BindingConfig> ParsePortBinding(string? portBinding, bool portmapOnly)
+    private static IEnumerable<ListenerConfig.BindingConfig> ParsePortBinding(
+        string? portBinding,
+        int index)
     {
-        if (portmapOnly)
-        {
-            yield break;
-        }
         ArgumentException.ThrowIfNullOrWhiteSpace(portBinding);
 
         var segments = CompactConfig.Parse(portBinding).ToArray();
@@ -446,38 +423,70 @@ internal class MultiplexerCommand : RootCommand
                 _ =>
                     throw new ArgumentException($"invalid port: \"{localPortSegment.Name}\"", nameof(portBinding)),
             };
-            if (localPort is not null)
-            {
-                if (rest is [])
-                {
-                    yield return new(Protocol.Tcp, (int)localPort);
-                    yield return new(Protocol.Udp, (int)localPort);
-                    yield break;
-                }
-                if (rest is [IdentifierSegment protocolSegment] &&
-                    Enum.TryParse<Protocol>(protocolSegment.Name, ignoreCase: true, out var protocol))
-                {
-                    yield return new(protocol, (int)localPort);
-                    yield break;
-                }
-            }
-        }
-        throw new ArgumentException($"invalid port binding spec: {portBinding}", nameof(portBinding));
-    }
 
-    private static IEnumerable<PortWardenConfig.PortMapConfig> ParsePortMaps(string? portMapping, bool muxOnly)
-    {
-        if (muxOnly)
-        {
+            IPAddress? bindAddress = null;
+            Protocol? protocol = null;
+            var listen = true;
+
+            switch (rest)
+            {
+                case [IdentifierSegment protocolSegment, PropertiesSegment paramsSegment]:
+                    if (Enum.TryParse<Protocol>(protocolSegment.Name, ignoreCase: true, out var parsedProtocol))
+                    {
+                        protocol = parsedProtocol;
+                    }
+                    if (paramsSegment.Properties.TryGetValue("bind-address", out var bindAddressString) &&
+                        !IPAddress.TryParse(bindAddressString, out bindAddress))
+                    {
+                        throw new ArgumentException($"invalid bind-address: {bindAddressString}", nameof(portBinding));
+                    }
+                    if (paramsSegment.Properties.TryGetValue("listen", out var listenString) &&
+                        !bool.TryParse(listenString, out listen))
+                    {
+                        throw new ArgumentException($"invalid listen value: {listenString}", nameof(portBinding));
+                    }
+                    break;
+                case [IdentifierSegment protocolSegment]:
+                    if (Enum.TryParse<Protocol>(protocolSegment.Name, ignoreCase: true, out var parsedProtocol2))
+                    {
+                        protocol = parsedProtocol2;
+                    }
+                    break;
+                case [PropertiesSegment paramsSegment]:
+                    if (paramsSegment.Properties.TryGetValue("bind-address", out var bindAddressString2) &&
+                        !IPAddress.TryParse(bindAddressString2, out bindAddress))
+                    {
+                        throw new ArgumentException($"invalid bind-address: {bindAddressString2}", nameof(portBinding));
+                    }
+                    if (paramsSegment.Properties.TryGetValue("listen", out var listenString2) &&
+                        !bool.TryParse(listenString2, out listen))
+                    {
+                        throw new ArgumentException($"invalid listen value: \"{listenString2}\"", nameof(portBinding));
+                    }
+                    break;
+            }
+
+            if (protocol is null)
+            {
+                yield return new(Protocol.Tcp, localPort, index, bindAddress, listen);
+                yield return new(Protocol.Udp, localPort, index, bindAddress, listen);
+                yield break;
+            }
+            yield return new(protocol.Value, localPort, index, bindAddress, listen);
             yield break;
         }
+    }
+
+    private static IEnumerable<PortWardenConfig.PortMapConfig> ParsePortMaps(
+        string? portMapping,
+        int index)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(portMapping);
 
         var segments = CompactConfig.Parse(portMapping).ToArray();
 
         if (segments is [IdentifierSegment publicPortSegment, IdentifierSegment localPortSegment, .. var rest])
         {
-            // ! means no port mapping for this binding
             if (publicPortSegment.Name == "!")
             {
                 yield break;
@@ -501,18 +510,35 @@ internal class MultiplexerCommand : RootCommand
                 _ =>
                     throw new ArgumentException($"invalid port: \"{localPortSegment.Name}\"", nameof(portMapping)),
             };
-            if (rest is [])
+
+            Protocol? protocol = null;
+
+            switch (rest)
             {
-                yield return new(Protocol.Tcp, localPort, publicPort);
-                yield return new(Protocol.Udp, localPort, publicPort);
+                case [IdentifierSegment protocolSegment, PropertiesSegment]:
+                    if (Enum.TryParse<Protocol>(protocolSegment.Name, ignoreCase: true, out var parsedProtocol))
+                    {
+                        protocol = parsedProtocol;
+                    }
+                    break;
+                case [IdentifierSegment protocolSegment]:
+                    if (Enum.TryParse<Protocol>(protocolSegment.Name, ignoreCase: true, out var parsedProtocol2))
+                    {
+                        protocol = parsedProtocol2;
+                    }
+                    break;
+                case [PropertiesSegment]:
+                    break;
+            }
+
+            if (protocol is null)
+            {
+                yield return new(Protocol.Tcp, localPort, publicPort, index);
+                yield return new(Protocol.Udp, localPort, publicPort, index);
                 yield break;
             }
-            if (rest is [IdentifierSegment protocolSegment] &&
-                Enum.TryParse<Protocol>(protocolSegment.Name, ignoreCase: true, out var protocol))
-            {
-                yield return new(protocol, localPort, publicPort);
-                yield break;
-            }
+            yield return new(protocol.Value, localPort, publicPort, index);
+            yield break;
         }
         throw new ArgumentException($"invalid port spec: {portMapping}", nameof(portMapping));
     }

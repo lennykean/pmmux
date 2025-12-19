@@ -1,0 +1,391 @@
+@page "/health-checks"
+@using Pmmux.Extensions.Management.Models
+@using Pmmux.Extensions.Management.UI.Services
+@inject PmmuxApiClient ApiClient
+
+<PageTitle>Health Checks - Pmmux</PageTitle>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-header__content">
+      <h2 class="card-header__title">Health Checks</h2>
+      <p class="card-header__subtitle">Configure backend health monitoring</p>
+    </div>
+    <div class="card-header__actions">
+      <button class="btn btn--primary" @onclick="OpenAddModal">
+        <i class="ph ph-plus"></i>
+        Add Health Check
+      </button>
+    </div>
+  </div>
+  <div class="card-body card-body--no-padding">
+    @if (loading && healthChecks.Count == 0)
+    {
+      <div class="loading-state">Loading health checks...</div>
+    }
+    else if (error != null)
+    {
+      <div class="error-state">@error</div>
+    }
+    else if (healthChecks.Count == 0)
+    {
+      <div class="empty-state">
+        <div class="empty-state__icon">
+          <i class="ph ph-heartbeat"></i>
+        </div>
+        <h3 class="empty-state__title">No health checks configured</h3>
+        <p class="empty-state__description">
+          Add health checks to monitor backend availability and route traffic to healthy instances.
+        </p>
+        <button class="btn btn--primary" @onclick="OpenAddModal">Add Health Check</button>
+      </div>
+    }
+    else
+    {
+      <div class="table-wrapper">
+        <table class="table">
+          <thead class="table-head">
+            <tr class="table-row">
+              <th class="table-header">Target</th>
+              <th class="table-header">Interval</th>
+              <th class="table-header">Timeout</th>
+              <th class="table-header">Thresholds</th>
+              <th class="table-header table-cell--right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="table-body">
+            @foreach (var spec in healthChecks)
+            {
+              var key = GetKey(spec);
+              <tr class="table-row" @key="key">
+                <td class="table-cell">
+                  <code>@FormatTarget(spec)</code>
+                </td>
+                <td class="table-cell">
+                  <span class="time-value">@FormatMilliseconds(spec.Interval)</span>
+                </td>
+                <td class="table-cell">
+                  <span class="time-value">@FormatMilliseconds(spec.Timeout)</span>
+                </td>
+                <td class="table-cell">
+                  <span class="threshold-info">
+                    <span class="threshold-label">Fail:</span> @(spec.FailureThreshold ?? 3)
+                    <span class="threshold-sep">/</span>
+                    <span class="threshold-label">Recover:</span> @(spec.RecoveryThreshold ?? 5)
+                  </span>
+                </td>
+                <td class="table-cell table-cell--right">
+                  <button class="btn btn--danger btn--sm" @onclick="() => ConfirmDelete(spec)"
+                    disabled="@(deleting == key)">
+                    @if (deleting == key)
+                    {
+                      <span class="loading-spinner"></span>
+                    }
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>
+
+@if (showAddModal)
+{
+  <div class="modal-overlay" @onclick="CloseAddModal">
+    <div class="modal" @onclick:stopPropagation="true">
+      <div class="modal-header">
+        <h3 class="modal-title">Add Health Check</h3>
+      </div>
+      <div class="modal-body">
+        @if (modalError != null)
+        {
+          <div class="modal-error">@modalError</div>
+        }
+        <div class="form-group">
+          <label class="form-label">Protocol (optional)</label>
+          <input class="form-input" type="text" placeholder="pass (leave empty for all)" @bind="newProtocol"
+            @bind:event="oninput" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Backend Name (optional)</label>
+          <input class="form-input" type="text" placeholder="my-backend (leave empty for all)" @bind="newBackend"
+            @bind:event="oninput" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Interval (ms)</label>
+            <input class="form-input" type="text" @bind="newIntervalMs" @bind:event="oninput" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Timeout (ms)</label>
+            <input class="form-input" type="text" @bind="newTimeoutMs" @bind:event="oninput" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Additional Parameters</label>
+          <input class="form-input" type="text" placeholder="key=value,key2=value2" @bind="newParams"
+            @bind:event="oninput" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn--secondary" @onclick="CloseAddModal">Cancel</button>
+        <button class="btn btn--primary" @onclick="AddHealthCheck" disabled="@adding">
+          @if (adding)
+          {
+            <span class="loading-spinner"></span>
+          }
+          Add Health Check
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (deleteTarget != null)
+{
+  <div class="modal-overlay" @onclick="CancelDelete">
+    <div class="modal" @onclick:stopPropagation="true">
+      <div class="modal-header">
+        <h3 class="modal-title">Delete Health Check</h3>
+      </div>
+      <div class="modal-body">
+        @if (modalError != null)
+        {
+          <div class="modal-error">@modalError</div>
+        }
+        <div class="confirm-content">
+          <p>Delete health check for <strong>@FormatTarget(deleteTarget)</strong>?</p>
+          <p>Backends will no longer be monitored by this check.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn--secondary" @onclick="CancelDelete">Cancel</button>
+        <button class="btn btn--danger" @onclick="DeleteHealthCheck">Delete</button>
+      </div>
+    </div>
+  </div>
+}
+
+@code {
+  private List<HealthCheckSpecDto> healthChecks = new();
+  private bool loading = true;
+  private string? error = null;
+  private string? modalError = null;
+  private bool showAddModal = false;
+  private bool adding = false;
+  private string? deleting = null;
+  private HealthCheckSpecDto? deleteTarget = null;
+
+  private string newProtocol = "";
+  private string newBackend = "";
+  private int newIntervalMs = 10000;
+  private int newTimeoutMs = 5000;
+  private string newParams = "";
+
+  private System.Timers.Timer? refreshTimer;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await LoadHealthChecks();
+    StartAutoRefresh();
+  }
+
+  private async Task LoadHealthChecks()
+  {
+    try
+    {
+      loading = true;
+      error = null;
+      healthChecks = await ApiClient.GetHealthChecksAsync();
+    }
+    catch (Exception ex)
+    {
+      error = ex.Message;
+    }
+    finally
+    {
+      loading = false;
+      StateHasChanged();
+    }
+  }
+
+  private void StartAutoRefresh()
+  {
+    refreshTimer = new System.Timers.Timer(10000);
+    refreshTimer.Elapsed += async (sender, e) => await LoadHealthChecks();
+    refreshTimer.Start();
+  }
+
+  private void OpenAddModal()
+  {
+    modalError = null;
+    showAddModal = true;
+  }
+
+  private void CloseAddModal()
+  {
+    showAddModal = false;
+    modalError = null;
+    ResetForm();
+  }
+
+  private void ResetForm()
+  {
+    newProtocol = "";
+    newBackend = "";
+    newIntervalMs = 10000;
+    newTimeoutMs = 5000;
+    newParams = "";
+  }
+
+  private async Task AddHealthCheck()
+  {
+    try
+    {
+      adding = true;
+      modalError = null;
+      var spec = new HealthCheckSpecDto
+      {
+        ProtocolName = string.IsNullOrWhiteSpace(newProtocol) ? null : newProtocol,
+        BackendName = string.IsNullOrWhiteSpace(newBackend) ? null : newBackend,
+        Interval = newIntervalMs,
+        Timeout = newTimeoutMs,
+        Parameters = ParseParams(newParams)
+      };
+      await ApiClient.CreateHealthCheckAsync(spec);
+      CloseAddModal();
+      await LoadHealthChecks();
+    }
+    catch (Exception ex)
+    {
+      modalError = GetErrorMessage(ex);
+    }
+    finally
+    {
+      adding = false;
+    }
+  }
+
+  private void ConfirmDelete(HealthCheckSpecDto spec)
+  {
+    modalError = null;
+    deleteTarget = spec;
+  }
+
+  private void CancelDelete()
+  {
+    deleteTarget = null;
+    modalError = null;
+  }
+
+  private async Task DeleteHealthCheck()
+  {
+    if (deleteTarget == null)
+    {
+      return;
+    }
+
+    var key = GetKey(deleteTarget);
+
+    try
+    {
+      deleting = key;
+      modalError = null;
+      await ApiClient.DeleteHealthCheckAsync(deleteTarget);
+      deleteTarget = null;
+      await LoadHealthChecks();
+    }
+    catch (Exception ex)
+    {
+      modalError = GetErrorMessage(ex);
+    }
+    finally
+    {
+      deleting = null;
+    }
+  }
+
+  private static string GetErrorMessage(Exception ex)
+  {
+    if (ex is PmmuxApiClient.ApiException apiEx)
+    {
+      return apiEx.Message;
+    }
+
+    var message = ex.Message;
+    if (ex.GetType().Name == "JSException" && message.Contains("Failed to fetch"))
+    {
+      return "Unable to connect to the server";
+    }
+
+    if (ex is HttpRequestException)
+    {
+      return "Server error";
+    }
+
+    return string.IsNullOrWhiteSpace(message) ? "An unexpected error occurred" : message;
+  }
+
+  private string GetKey(HealthCheckSpecDto spec)
+  {
+    return $"{spec.ProtocolName ?? "*"}/{spec.BackendName ?? "*"}";
+  }
+
+  private string FormatTarget(HealthCheckSpecDto spec)
+  {
+    if (spec.ProtocolName == null && spec.BackendName == null)
+    {
+      return "All backends";
+    }
+    if (spec.BackendName == null)
+    {
+      return $"All {spec.ProtocolName} backends";
+    }
+    return $"{spec.ProtocolName}/{spec.BackendName}";
+  }
+
+  private Dictionary<string, string> ParseParams(string paramsStr)
+  {
+    var result = new Dictionary<string, string>();
+    if (string.IsNullOrWhiteSpace(paramsStr))
+    {
+      return result;
+    }
+
+    foreach (var pair in paramsStr.Split(','))
+    {
+      var parts = pair.Split('=', 2);
+      if (parts.Length == 2)
+      {
+        var key = parts[0].Trim();
+        var value = parts[1].Trim();
+        if (!string.IsNullOrEmpty(key) && !string.IsNullOrEmpty(value))
+        {
+          result[key] = value;
+        }
+      }
+    }
+    return result;
+  }
+
+  private string FormatMilliseconds(int? milliseconds)
+  {
+    if (milliseconds is null)
+    {
+      return "N/A";
+    }
+
+    return milliseconds.Value >= 1000
+      ? $"{milliseconds.Value / 1000}s"
+      : $"{milliseconds.Value}ms";
+  }
+
+  public void Dispose()
+  {
+    refreshTimer?.Dispose();
+  }
+}

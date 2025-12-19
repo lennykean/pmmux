@@ -34,12 +34,34 @@ internal class CertificateManager(ILoggerFactory loggerFactory, TlsConfig tlsCon
 
     public bool TryAddCertificate(string name, X509Certificate certificate)
     {
-        return _certificates.TryAdd(name, certificate);
+        _logger.LogTrace("adding certificate {CertificateName}", name);
+
+        if (_certificates.TryAdd(name, certificate))
+        {
+            _logger.LogDebug("added certificate {CertificateName}", name);
+            return true;
+        }
+        else
+        {
+            _logger.LogError("{CertificateName} could not be added", name);
+            return false;
+        }
     }
 
     public bool TryAddMapping(string hostname, string certificateName)
     {
-        return _certificateMap.TryAdd(hostname, certificateName);
+        _logger.LogTrace("adding certificate mapping '{Hostname}' -> '{CertificateName}'", hostname, certificateName);
+
+        if (_certificateMap.TryAdd(hostname, certificateName))
+        {
+            _logger.LogDebug("added {Hostname}->{CertificateName}", hostname, certificateName);
+            return true;
+        }
+        else
+        {
+            _logger.LogError("{Hostname}->{CertificateName} could not be added", hostname, certificateName);
+            return false;
+        }
     }
 
     public bool TryGetCertificate(string? hostname, [NotNullWhen(true)] out X509Certificate? certificate)
@@ -95,12 +117,24 @@ internal class CertificateManager(ILoggerFactory loggerFactory, TlsConfig tlsCon
 
     public bool RemoveCertificate(string certificateName)
     {
-        return _certificates.TryRemove(certificateName, out _);
+        _logger.LogTrace("removing certificate '{CertificateName}'", certificateName);
+        var removed = _certificates.TryRemove(certificateName, out _);
+        if (removed)
+        {
+            _logger.LogDebug("removed certificate '{CertificateName}'", certificateName);
+        }
+        return removed;
     }
 
     public bool RemoveMapping(string hostname)
     {
-        return _certificateMap.Remove(hostname, out _);
+        _logger.LogTrace("removing certificate mapping '{Hostname}'", hostname);
+        var removed = _certificateMap.Remove(hostname, out _);
+        if (removed)
+        {
+            _logger.LogDebug("removed certificate mapping '{Hostname}'", hostname);
+        }
+        return removed;
     }
 
     public X509Certificate GenerateSelfSignedCertificate(string? hostName)

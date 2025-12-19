@@ -6,8 +6,8 @@
 Local port number to bind the listener to\.
 
 ```csharp
-public int Port { get; init; }
+public System.Nullable<int> Port { get; init; }
 ```
 
 #### Property Value
-[System\.Int32](https://learn.microsoft.com/en-us/dotnet/api/system.int32 'System\.Int32')
+[System\.Nullable&lt;](https://learn.microsoft.com/en-us/dotnet/api/system.nullable-1 'System\.Nullable\`1')[System\.Int32](https://learn.microsoft.com/en-us/dotnet/api/system.int32 'System\.Int32')[&gt;](https://learn.microsoft.com/en-us/dotnet/api/system.nullable-1 'System\.Nullable\`1')

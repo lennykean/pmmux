@@ -1,4 +1,4 @@
-using System.Threading;
+using System.Linq;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Routing;
 
 using Pmmux.Abstractions;
 using Pmmux.Extensions.Management.Abstractions;
-using Pmmux.Extensions.Management.Dtos;
+using Pmmux.Extensions.Management.Models;
 
 namespace Pmmux.Extensions.Management;
 
@@ -17,30 +17,29 @@ internal class HealthCheckEndpointGroup(IBackendMonitor backendMonitor) : IManag
 
     public void MapEndpoints(IEndpointRouteBuilder builder)
     {
-        builder.MapGet("/", () =>
+        builder.MapGet("/", () => ExecutionContextUtility.SuppressFlow(() =>
         {
-            using (ExecutionContext.SuppressFlow())
-            {
-                return backendMonitor.GetHealthChecks();
-            }
-        });
-        builder.MapPost("/", ([FromBody] HealthCheckRequestDto request) =>
+            return Results.Ok(backendMonitor.GetHealthChecks().Select(x => x.ToDto()));
+        }));
+
+        builder.MapPost("/", ([FromBody] HealthCheckSpecDto request) => ExecutionContextUtility.SuppressFlow(() =>
         {
-            using (ExecutionContext.SuppressFlow())
+            var spec = request.ToHealthCheckSpec();
+            if (!backendMonitor.TryAddHealthCheck(spec))
             {
-                return backendMonitor.TryAddHealthCheck(request.ToHealthCheckSpec())
-                    ? Results.Ok()
-                    : Results.Conflict();
+                return Results.Conflict();
             }
-        });
-        builder.MapDelete("/", ([FromBody] HealthCheckRequestDto request) =>
+            return Results.Ok();
+        }));
+
+        builder.MapDelete("/", ([FromBody] HealthCheckSpecDto request) => ExecutionContextUtility.SuppressFlow(() =>
         {
-            using (ExecutionContext.SuppressFlow())
+            var spec = request.ToHealthCheckSpec();
+            if (!backendMonitor.TryRemoveHealthCheck(spec))
             {
-                return backendMonitor.TryRemoveHealthCheck(request.ToHealthCheckSpec())
-                    ? Results.Ok()
-                    : Results.NotFound();
+                return Results.NotFound();
             }
-        });
+            return Results.Ok();
+        }));
     }
 }

@@ -6,20 +6,16 @@
 Backend that forwards traffic to a configured upstream endpoint\.
 
 ```csharp
-public class PassthroughBackend : Pmmux.Abstractions.IConnectionOrientedBackend, Pmmux.Abstractions.IBackend, System.IAsyncDisposable, Pmmux.Abstractions.IConnectionlessBackend, Pmmux.Abstractions.IHealthCheckBackend
+public class PassthroughBackend : Pmmux.Core.BackendBase, Pmmux.Abstractions.IConnectionOrientedBackend, Pmmux.Abstractions.IBackend, System.IAsyncDisposable, Pmmux.Abstractions.IConnectionlessBackend, Pmmux.Abstractions.IHealthCheckBackend
 ```
 
-Inheritance [System\.Object](https://learn.microsoft.com/en-us/dotnet/api/system.object 'System\.Object') &#129106; PassthroughBackend
+Inheritance [System\.Object](https://learn.microsoft.com/en-us/dotnet/api/system.object 'System\.Object') &#129106; [BackendBase](../BackendBase/index.md 'Pmmux\.Core\.BackendBase') &#129106; PassthroughBackend
 
 Implements [IConnectionOrientedBackend](..\..\Pmmux.Abstractions\docs\Pmmux/Abstractions/IConnectionOrientedBackend/index.md 'Pmmux\.Abstractions\.IConnectionOrientedBackend'), [IBackend](..\..\Pmmux.Abstractions\docs\Pmmux/Abstractions/IBackend/index.md 'Pmmux\.Abstractions\.IBackend'), [System\.IAsyncDisposable](https://learn.microsoft.com/en-us/dotnet/api/system.iasyncdisposable 'System\.IAsyncDisposable'), [IConnectionlessBackend](..\..\Pmmux.Abstractions\docs\Pmmux/Abstractions/IConnectionlessBackend/index.md 'Pmmux\.Abstractions\.IConnectionlessBackend'), [IHealthCheckBackend](..\..\Pmmux.Abstractions\docs\Pmmux/Abstractions/IHealthCheckBackend/index.md 'Pmmux\.Abstractions\.IHealthCheckBackend')
 
 | Constructors | |
 | :--- | :--- |
 | [PassthroughBackend\(BackendSpec\)](PassthroughBackend(BackendSpec).md 'Pmmux\.Core\.PassthroughBackend\.PassthroughBackend\(Pmmux\.Abstractions\.BackendSpec\)') | |
-
-| Properties | |
-| :--- | :--- |
-| [Backend](Backend.md 'Pmmux\.Core\.PassthroughBackend\.Backend') | The backend metadata and configuration information\. |
 
 | Methods | |
 | :--- | :--- |

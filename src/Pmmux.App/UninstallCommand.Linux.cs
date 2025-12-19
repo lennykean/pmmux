@@ -1,13 +1,12 @@
 using System;
 using System.CommandLine;
-using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Pmmux.App;
 
-internal class UninstallCommand : Command
+internal sealed class UninstallCommand : Command
 {
     public UninstallCommand() : base("uninstall", "remove systemd service")
     {
@@ -23,17 +22,14 @@ internal class UninstallCommand : Command
 
         var unitFilePath = "/etc/systemd/system/pmmux.service";
 
-        await Process.Start("systemctl", "stop pmmux.service")
-            .WaitForExitAsync(cancellationToken)
-            .ConfigureAwait(false);
+        await ShellUtility.ExecAsync("systemctl", "stop pmmux.service", cancellationToken).ConfigureAwait(false);
+        await ShellUtility.ExecAsync("systemctl", "disable pmmux.service", cancellationToken).ConfigureAwait(false);
 
         if (File.Exists(unitFilePath))
         {
             File.Delete(unitFilePath);
         }
 
-        await Process.Start("systemctl", "daemon-reload")
-            .WaitForExitAsync(cancellationToken)
-            .ConfigureAwait(false);
+        await ShellUtility.ExecAsync("systemctl", "daemon-reload", cancellationToken).ConfigureAwait(false);
     }
 }

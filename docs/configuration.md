@@ -18,20 +18,34 @@ Option | Short | Default | Description
 `--routing-strategy` | `-r` | `first-available` | Routing strategy name
 `--health-check` | `-z` | - | Health check specification (multiple may be specified)
 `--extensions` | `-x` | - | Extension DLL paths (multiple may be specified)
-`--mux-only` | - | `false` | Multiplexer only - disable port forwarding
-`--portmap-only` | - | `false` | Port mapping only - disable the traffic multiplexer
 
 #### Port Binding Format
 
-Port bindings use the format `<public-port>:<local-port>:<protocol>`:
+Port bindings use the format `<public-port>:<local-port>:<protocol>:<parameters>`:
 
 - `public-port` - Public port on the NAT device to forward to `local-port`
 - `local-port` - Local port that will receive traffic
 - `protocol` - bind only `tcp` or `udp` port (both are enabled by default)
+- `parameters` - Optional comma-separated `key=value` pairs
 
 ```sh
 -p 8080:8080:tcp # Forward WAN port 8080 and receive the traffic on local port 8080
 -p 443:8443:tcp # Forward WAN port 443 and receive the traffic on local port 8443
+```
+
+##### Per-Binding Parameters
+
+Parameter | Default | Description
+-|-|-
+`bind-address` | `0.0.0.0` | IP address to bind the listener to
+`listen` | `true` | Whether the multiplexer creates a listener for this port
+
+```sh
+# Bind to a specific network interface
+-p 8080:8080:tcp:bind-address=192.168.1.100
+
+# NAT mapping only, no multiplexer listener
+-p 443:443:tcp:listen=false
 ```
 
 ##### Disable Port Forwarding
@@ -116,13 +130,43 @@ Values containing special characters (commas, colons, equals, etc) must be quote
 
 ### Common Parameters
 
-These parameters are supported by most standard backends:
+Built-in backends (`pass`, `noop`) as well as [standard extensions](#standard-extensions) support the following parameters. Consult documentation for the specific backend being used.
 
-Parameter | Values | Description
--|-|-
-`priority` | `vip`, `normal`, `standby`, `fallback` | Routing priority tier (backend-specific default, usually `normal`)
-`property[key]` | regex | Match connection property (e.g., `property[tls.sni]=api\.example\.com`)
-`property[key]!` | regex | Negated match (e.g., `property[tls]!=true`)
+Parameter | Values | Negatable | Multi-value | Description
+-|-|-|-|-
+`priority` | `vip`, `normal`, `standby`, `fallback` | No | No | Routing priority tier (backend-specific default, usually `normal`)
+`local-ip` | IP/CIDR | Yes | Yes | Match client local IP address
+`remote-ip` | IP/CIDR | Yes | Yes | Match client remote IP address
+`local-port` | port or range | Yes | Yes | Match client local port
+`remote-port` | port or range | Yes | Yes | Match client remote port
+`property[key]` | regex | Yes | Yes | Match connection property
+
+#### Parameter Modifiers
+
+**Negated parameters**: `!` can be appended to the parameter name to invert the match.
+
+```sh
+# match backends excluding local network traffic
+-b "external:pass:remote-ip!=10.0.0.0/8,target.ip=192.0.2.1,target.port=8080"
+```
+
+**Multi-value parameters**: Multiple values can be separated with semicolons.
+
+Multi-value parameters match if any value matches (logical OR). Multi-value negated parameters match only if none of the values match (logical AND).
+
+```sh
+# match multiple CIDR blocks (any match)
+-b "web:pass:local-ip=10.0.0.0/8;192.168.0.0/16,target.ip=127.0.0.1,target.port=3000"
+
+# exclude multiple CIDR blocks (none match)
+-b "web:pass:remote-ip!=10.0.0.0/8;172.16.0.0/12;192.168.0.0/16,target.ip=192.0.2.1,target.port=8080"
+
+# match multiple ports and port ranges (any match)
+-b "web:pass:local-port=80;443;8000-9000,target.ip=127.0.0.1,target.port=3000"
+
+# match multiple regex patterns (any match)
+-b "api:pass:property[host]=api\.example\.com;web\.example\.com,target.ip=127.0.0.1,target.port=4000"
+```
 
 ### Priority Tiers
 
@@ -143,13 +187,13 @@ Forwards traffic to another TCP/UDP endpoint.
 
 Parameter | Required | Description
 -|-|-
-`ip` | Yes | Target IP address
-`port` | Yes | Target port
+`target.ip` | Yes | Target IP address
+`target.port` | Yes | Target port
 
 **Examples:**
 ```sh
 # simple passthrough
--b "web:pass:ip=127.0.0.1,port=3000"
+-b "web:pass:target.ip=127.0.0.1,target.port=3000"
 ```
 
 #### No-op (`noop`)
@@ -159,7 +203,7 @@ Accepts and discards all traffic. Useful as a fallback backend. Defaults to `fal
 **Examples:**
 ```sh
 # pass through ipv6 traffic, discard other traffic
--b "web:pass:property[socket.address-family]=internetwork,ip=127.0.0.1,port=3000" -b "blackhole:noop"
+-b "web:pass:property[socket.address-family]=internetwork,target.ip=127.0.0.1,target.port=3000" -b "blackhole:noop"
 ```
 
 ### Extension Protocols
@@ -233,7 +277,7 @@ Configured via `--routing-strategy` / `-r`:
 
 ```sh
 # Use least-requests strategy
-pmmux -r least-requests -b web1:pass:ip=10.0.1.10,port=80 -b web2:pass:ip=10.0.1.11,port=80 -p 8080:8080:tcp
+pmmux -r least-requests -b web1:pass:target.ip=10.0.1.10,target.port=80 -b web2:pass:target.ip=10.0.1.11,target.port=80 -p 8080:8080:tcp
 ```
 
 ## Logging
@@ -252,7 +296,7 @@ Option | Short | Default | Description
 
 Debug logging to console:
 ```sh
-pmmux --verbosity debug -b web:pass:ip=127.0.0.1,port=3000 -p 8080:8080:tcp
+pmmux --verbosity debug -b web:pass:target.ip=127.0.0.1,target.port=3000 -p 8080:8080:tcp
 ```
 
 File logging with rotation:
@@ -301,7 +345,7 @@ Extensions may add additional CLI options and configuration sections.
 Basic passthrough to a local server:
 
 ```sh
-pmmux -b "web:pass:ip=127.0.0.1,port=3000" -p 8080:8080:tcp
+pmmux -b "web:pass:target.ip=127.0.0.1,target.port=3000" -p 8080:8080:tcp
 ```
 
 Multiple backends with routing strategy:
@@ -309,8 +353,8 @@ Multiple backends with routing strategy:
 ```sh
 pmmux \
   -p 8080:8080:tcp \
-  -b "primary:pass:ip=127.0.0.1,port=3000" \
-  -b "secondary:pass:ip=127.0.0.1,port=3001" \
+  -b "primary:pass:target.ip=127.0.0.1,target.port=3000" \
+  -b "secondary:pass:target.ip=127.0.0.1,target.port=3001" \
   -b "blackhole:noop" \
   -r least-requests
 ```
@@ -320,8 +364,8 @@ Health check with per-backend settings:
 ```sh
 pmmux \
   -p 8080:8080:tcp \
-  -b "primary:pass:ip=127.0.0.1,port=3000" \
-  -b "secondary:pass:ip=127.0.0.1,port=3001" \
+  -b "primary:pass:target.ip=127.0.0.1,target.port=3000" \
+  -b "secondary:pass:target.ip=127.0.0.1,target.port=3001" \
   -b "blackhole:noop" \
   -z "pass:primary:interval=10000" \
   -z "pass:secondary:interval=30000" \
@@ -358,6 +402,7 @@ port-bindings = [
   "8080:8080:tcp",
   "8080:8080:udp",
   "!:9000:tcp", # Local only, no NAT mapping
+  "443:443:tcp:listen=false", # NAT mapping only
 ]
 
 # Routing
@@ -368,8 +413,8 @@ preview-buffer-limit = 65536
 
 # Backends
 backends = [
-  "web:pass:ip=127.0.0.1,port=3000",
-  "api:pass:ip=127.0.0.1,port=4000,priority=normal",
+  "web:pass:target.ip=127.0.0.1,target.port=3000",
+  "api:pass:target.ip=127.0.0.1,target.port=4000,priority=normal",
   "fallback:noop:priority=fallback",
 ]
 
@@ -387,8 +432,6 @@ log-file-max-retain = 5
 log-metrics = false
 
 # NAT/Port forwarding
-mux-only = false
-portmap-only = false
 port-map-protocol = "Upnp"
 port-map-lifetime = 3600
 port-map-renewal-lead = 60
@@ -443,8 +486,8 @@ export PMMUX__ROUTING_STRATEGY="least-requests"
 export PMMUX__LOG_DIRECTORY="./logs"
 
 # Array values use indexed keys
-export PMMUX__BACKENDS__0="web:pass:ip=127.0.0.1,port=3000"
-export PMMUX__BACKENDS__1="api:pass:ip=127.0.0.1,port=4000"
+export PMMUX__BACKENDS__0="web:pass:target.ip=127.0.0.1,target.port=3000"
+export PMMUX__BACKENDS__1="api:pass:target.ip=127.0.0.1,target.port=4000"
 export PMMUX__PORT_BINDINGS__0="8080:8080:tcp"
 ```
 

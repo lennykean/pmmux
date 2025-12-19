@@ -6,7 +6,7 @@
 Process the message from the client\.
 
 ```csharp
-public System.Threading.Tasks.Task HandleMessageAsync(Pmmux.Abstractions.ClientInfo client, System.Collections.Generic.Dictionary<string,string> messageMetadata, byte[] message, System.Threading.CancellationToken cancellationToken=default(System.Threading.CancellationToken));
+public virtual System.Threading.Tasks.Task HandleMessageAsync(Pmmux.Abstractions.ClientInfo client, System.Collections.Generic.Dictionary<string,string> messageMetadata, byte[] message, System.Threading.CancellationToken cancellationToken=default(System.Threading.CancellationToken));
 ```
 #### Parameters
 

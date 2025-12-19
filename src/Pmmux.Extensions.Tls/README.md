@@ -36,7 +36,7 @@ TLS with auto-generated self-signed certificates:
 pmmux \
   --tls-enable \
   --tls-generate-certificates \
-  -b "web:pass:ip=127.0.0.1,port=3000" \
+  -b "web:pass:target.ip=127.0.0.1,target.port=3000" \
   -p 443:8443:tcp
 ```
 
@@ -48,7 +48,7 @@ pmmux \
   --tls-certificate "default:path=/certs/server.pfx,type=pfx,password=secret" \
   --tls-certificate-map "default:example.com" \
   --tls-certificate-map "default:*.example.com" \
-  -b "web:pass:ip=127.0.0.1,port=3000" \
+  -b "web:pass:target.ip=127.0.0.1,target.port=3000" \
   -p 443:8443:tcp
 ```
 

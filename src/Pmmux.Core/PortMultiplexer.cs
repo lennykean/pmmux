@@ -54,10 +54,8 @@ public sealed class PortMultiplexer(
     /// <inheritdoc />
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
-        if (_state.Is(State.Dispose))
-        {
-            throw new ObjectDisposedException(nameof(PortMultiplexer));
-        }
+        ObjectDisposedException.ThrowIf(_state.Is(State.Dispose), nameof(PortMultiplexer));
+
         if (!_state.TryTransition(to: State.Starting, from: State.Initial))
         {
             throw new InvalidOperationException();
@@ -68,14 +66,26 @@ public sealed class PortMultiplexer(
         {
             await portWarden.StartAsync(cancellationToken).ConfigureAwait(false);
 
-            var listeners = config.PortBindings
-                .Select(p => (p.NetworkProtocol, p.Port))
-                .Union(portWarden.GetPortMaps().Select(p => (p.NetworkProtocol, Port: p.LocalPort)))
-                .Distinct();
+            var mappedPorts = portWarden.GetPortMaps().ToArray();
 
-            foreach (var (NetworkProtocol, Port) in listeners)
+            var bindings =
+                from binding in config.PortBindings
+                join portMap in mappedPorts on
+                    new { binding.Index, binding.NetworkProtocol } equals
+                    new { portMap.Index, portMap.NetworkProtocol } into portMaps
+                from portMap in portMaps.DefaultIfEmpty()
+                select (
+                    binding.NetworkProtocol,
+                    Port: portMap?.LocalPort ?? binding.Port,
+                    BindAddress: binding.BindAddress ?? IPAddress.Any);
+
+            foreach (var (networkProtocol, port, bindAddress) in bindings)
             {
-                AddListenerInternal(NetworkProtocol, Port);
+                if (port is null)
+                {
+                    throw new InvalidOperationException($"no port was specified for {networkProtocol} listener");
+                }
+                AddListenerInternal(networkProtocol, (int)port, bindAddress);
             }
             await router.InitializeAsync(new ClientWriter.Factory(_listeners), cancellationToken).ConfigureAwait(false);
 
@@ -103,10 +113,8 @@ public sealed class PortMultiplexer(
     /// <inheritdoc />
     public Task<IEnumerable<ListenerInfo>> GetListenersAsync(CancellationToken cancellationToken = default)
     {
-        if (_state.Is(State.Dispose))
-        {
-            throw new ObjectDisposedException(nameof(PortMultiplexer));
-        }
+        ObjectDisposedException.ThrowIf(_state.Is(State.Dispose), nameof(PortMultiplexer));
+
         if (!_state.Is(State.Started))
         {
             throw new InvalidOperationException();
@@ -115,23 +123,19 @@ public sealed class PortMultiplexer(
     }
 
     /// <inheritdoc />
-    public ListenerInfo? AddListener(Protocol networkProtocol, int port)
+    public ListenerInfo? AddListener(Protocol networkProtocol, int port, IPAddress? bindAddress = null)
     {
-        if (_state.Is(State.Dispose))
-        {
-            throw new ObjectDisposedException(nameof(PortMultiplexer));
-        }
+        ObjectDisposedException.ThrowIf(_state.Is(State.Dispose), nameof(PortMultiplexer));
+
         if (!_state.Is(State.Started))
         {
             throw new InvalidOperationException();
         }
-        var binding = new BindingConfig(networkProtocol, port);
-
-        if (_listeners.ContainsKey(binding))
+        if (_listeners.Keys.Any(b => b.NetworkProtocol == networkProtocol && b.Port == port))
         {
             throw new ArgumentException($"listener conflict");
         }
-        return AddListenerInternal(networkProtocol, port);
+        return AddListenerInternal(networkProtocol, port, bindAddress ?? IPAddress.Any);
     }
 
     /// <inheritdoc />
@@ -140,16 +144,14 @@ public sealed class PortMultiplexer(
         int port,
         CancellationToken cancellationToken = default)
     {
-        if (_state.Is(State.Dispose))
-        {
-            throw new ObjectDisposedException(nameof(PortMultiplexer));
-        }
+        ObjectDisposedException.ThrowIf(_state.Is(State.Dispose), nameof(PortMultiplexer));
+
         if (!_state.Is(State.Started))
         {
             throw new InvalidOperationException();
         }
-        var binding = new BindingConfig(networkProtocol, port);
-        if (!_listeners.TryRemove(binding, out var boundListener))
+        var matchingBinding = _listeners.Keys.FirstOrDefault(b => b.NetworkProtocol == networkProtocol && b.Port == port);
+        if (matchingBinding is null || !_listeners.TryRemove(matchingBinding, out var boundListener))
         {
             return false;
         }
@@ -206,9 +208,14 @@ public sealed class PortMultiplexer(
         _disposedTsc.SetResult(true);
     }
 
-    private ListenerInfo? AddListenerInternal(Protocol networkProtocol, int port)
+    private ListenerInfo? AddListenerInternal(Protocol networkProtocol, int port, IPAddress bindAddress)
     {
-        var binding = new BindingConfig(networkProtocol, port);
+        if (port <= 0)
+        {
+            throw new ArgumentException("invalid port", nameof(port));
+        }
+
+        var binding = new BindingConfig(networkProtocol, port, Index: null, bindAddress, Listen: true);
 
         using (_logger.BeginScope("{NetworkProtocol} {Port}", networkProtocol, port))
         {
@@ -232,7 +239,7 @@ public sealed class PortMultiplexer(
 
                 _logger.LogTrace("binding port");
 
-                listener.Bind(new IPEndPoint(config.BindAddress, port));
+                listener.Bind(new IPEndPoint(bindAddress, port));
 
                 if (listener.SocketType == SocketType.Stream)
                 {
@@ -300,9 +307,7 @@ public sealed class PortMultiplexer(
                 {
                     _logger.LogTrace("waiting for connection");
 
-                    var clientConnection = await listener.AcceptAsync()
-                        .WithCancellation(cancellationToken)
-                        .ConfigureAwait(false);
+                    var clientConnection = await listener.AcceptAsync(cancellationToken).ConfigureAwait(false);
 
                     if (clientConnection.RemoteEndPoint as IPEndPoint is not IPEndPoint remoteEndpoint)
                     {
@@ -318,7 +323,7 @@ public sealed class PortMultiplexer(
 
                     _ = Task.Run(async () =>
                     {
-                        var client = new ClientInfo((IPEndPoint)listener.LocalEndPoint, remoteEndpoint);
+                        var client = new ClientInfo(listener.LocalEndPoint as IPEndPoint, remoteEndpoint);
                         try
                         {
                             var (success, backend, reason) = await router.RouteConnectionAsync(
@@ -350,7 +355,7 @@ public sealed class PortMultiplexer(
 
                             TeardownSocket(clientConnection, $"{networkProtocol} {client.RemoteEndpoint}");
                         }
-                    });
+                    }, CancellationToken.None);
                 }
                 catch (OperationCanceledException)
                 {
@@ -405,7 +410,7 @@ public sealed class PortMultiplexer(
                         result.ReceivedBytes,
                         remoteEndpoint);
 
-                    var client = new ClientInfo((IPEndPoint)listener.LocalEndPoint, remoteEndpoint);
+                    var client = new ClientInfo(listener.LocalEndPoint as IPEndPoint, remoteEndpoint);
 
                     _ = Task.Run(async () =>
                     {
@@ -441,7 +446,7 @@ public sealed class PortMultiplexer(
                                 result.ReceivedBytes,
                                 client.RemoteEndpoint);
                         }
-                    });
+                    }, CancellationToken.None);
                 }
                 catch (OperationCanceledException)
                 {

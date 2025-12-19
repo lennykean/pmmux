@@ -69,9 +69,12 @@ internal abstract class BackendBroker(
                 .WithCancellation(_workerCts.Token)
                 .ConfigureAwait(false))
             {
-                if (status.Status == BackendStatus.Unknown)
+                if (status.Status != BackendStatus.Unknown)
                 {
-                    logger.LogDebug("status changed: {BackendStatus} ({Reason})", status.Status, status.StatusReason);
+                    logger.LogDebug(
+                        "status changed: {BackendStatus}{StatusReason}",
+                        status.Status,
+                        status.StatusReason is null ? "" : $" ({status.StatusReason})");
                 }
                 Status = status;
             }

@@ -17,9 +17,12 @@ namespace Pmmux.Abstractions;
 /// <example>
 /// Parsing a backend configuration string:
 /// <code>
-/// var input = "web:pass:ip=127.0.0.1,port=3000";
+/// var input = "web:pass:target.ip=127.0.0.1,target.port=3000";
 /// var segments = CompactConfig.Parse(input);
-/// // Returns: IdentifierSegment("web"), IdentifierSegment("pass"), PropertiesSegment({ ip=127.0.0.1, port=3000 })
+/// // Returns:
+/// // IdentifierSegment("web"),
+/// // IdentifierSegment("pass"),
+/// // PropertiesSegment({ ["target.ip"] = "127.0.0.1", ["target.port"] = "3000" })
 /// </code>
 /// </example>
 public abstract record CompactConfig
@@ -72,7 +75,7 @@ public abstract record CompactConfig
                 [var (key, _)] =>
                     new(Unescape(Unquote(key.Trim())), string.Empty),
                 [var (key, _), var (value, _)] =>
-                    new(Unescape(Unquote(key.Trim())), Unescape(Unquote(value.Trim()))),
+                        new(Unescape(Unquote(key.Trim())), Unescape(Unquote(value.Trim()))),
                 _ =>
                     throw new ArgumentException($"invalid property specifier: {property}", nameof(segment))
             };

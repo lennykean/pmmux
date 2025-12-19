@@ -1,0 +1,362 @@
+@page "/listeners"
+@using Pmmux.Extensions.Management.Models
+@using Pmmux.Extensions.Management.UI.Services
+@using Mono.Nat
+@inject PmmuxApiClient ApiClient
+
+<PageTitle>Listeners - Pmmux</PageTitle>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-header__content">
+      <h2 class="card-header__title">Listeners</h2>
+      <p class="card-header__subtitle">Ports that pmmux listens on for incoming connections</p>
+    </div>
+    <div class="card-header__actions">
+      <button class="btn btn--primary" @onclick="OpenAddModal">
+        <i class="ph ph-plus"></i>
+        Add Listener
+      </button>
+    </div>
+  </div>
+  <div class="card-body card-body--no-padding">
+    @if (loading && listeners.Count == 0)
+    {
+      <div class="loading-state">Loading listeners...</div>
+    }
+    else if (error != null)
+    {
+      <div class="error-state">@error</div>
+    }
+    else if (listeners.Count == 0)
+    {
+      <div class="empty-state">
+        <div class="empty-state__icon">
+          <i class="ph ph-broadcast"></i>
+        </div>
+        <h3 class="empty-state__title">No listeners configured</h3>
+        <p class="empty-state__description">
+          Add listeners to specify which ports pmmux should accept connections on.
+        </p>
+        <button class="btn btn--primary" @onclick="OpenAddModal">Add Listener</button>
+      </div>
+    }
+    else
+    {
+      <div class="table-wrapper">
+        <table class="table">
+          <thead class="table-head">
+            <tr class="table-row">
+              <th class="table-header">Protocol</th>
+              <th class="table-header">Address</th>
+              <th class="table-header">Port</th>
+              <th class="table-header table-cell--right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="table-body">
+            @foreach (var listener in listeners)
+            {
+              var key = $"{listener.NetworkProtocol}:{listener.Port}";
+              <tr class="table-row" @key="key">
+                <td class="table-cell">
+                  <span class="protocol-badge">@listener.NetworkProtocol</span>
+                </td>
+                <td class="table-cell">
+                  <code>@listener.Address</code>
+                </td>
+                <td class="table-cell">
+                  <code>@listener.Port</code>
+                </td>
+                <td class="table-cell table-cell--right">
+                  <button class="btn btn--danger btn--sm" @onclick="() => ConfirmDelete(listener)"
+                    disabled="@(deleting == key)">
+                    @if (deleting == key)
+                    {
+                      <span class="loading-spinner"></span>
+                    }
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>
+
+@* Add Listener Modal *@
+@if (showAddModal)
+{
+  <div class="modal-overlay" @onclick="CloseAddModal">
+    <div class="modal" @onclick:stopPropagation="true">
+      <div class="modal-header">
+        <h3 class="modal-title">Add Listener</h3>
+      </div>
+      <div class="modal-body">
+        @if (modalError != null)
+        {
+          <div class="modal-error">@modalError</div>
+        }
+        <div class="form-group">
+          <label class="form-label">Network Protocol</label>
+          <select class="form-select" @bind="newProtocol">
+            <option value="@Protocol.Tcp">TCP</option>
+            <option value="@Protocol.Udp">UDP</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Port</label>
+          <input class="form-input" type="text" placeholder="8080" @bind="newPort" @bind:event="oninput" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bind Address</label>
+          <input class="form-input" type="text" placeholder="0.0.0.0" @bind="newBindAddress" @bind:event="oninput" />
+          <p class="form-hint">IP address to bind to. Leave empty for all interfaces (0.0.0.0).</p>
+        </div>
+        <p class="form-hint">
+          This adds a listening port without NAT forwarding. Use Port Maps to expose it publicly.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn--secondary" @onclick="CloseAddModal">Cancel</button>
+        <button class="btn btn--primary" @onclick="AddListener"
+          disabled="@(adding || string.IsNullOrWhiteSpace(newPort))">
+          @if (adding)
+          {
+            <span class="loading-spinner"></span>
+          }
+          Add Listener
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (deleteTarget != null)
+{
+  <div class="modal-overlay" @onclick="CancelDelete">
+    <div class="modal" @onclick:stopPropagation="true">
+      <div class="modal-header">
+        <h3 class="modal-title">Delete Listener</h3>
+      </div>
+      <div class="modal-body">
+        @if (modalError != null)
+        {
+          <div class="modal-error">@modalError</div>
+        }
+        <div class="confirm-content">
+          <p>Stop listening on <strong>@deleteTarget.NetworkProtocol :@deleteTarget.Port</strong>?</p>
+          <p>New connections on this port will no longer be accepted.</p>
+        </div>
+        @if (associatedPortMaps.Count > 0)
+        {
+          <div class="form-hint form-hint--warning" style="margin-top: var(--space-md);">
+            <i class="ph ph-warning"></i>
+            This listener has @associatedPortMaps.Count port map(s) associated with it.
+          </div>
+          <div class="form-checkbox-group" style="margin-top: var(--space-sm);">
+            <input class="form-checkbox" type="checkbox" id="deletePortMaps" checked="@deleteAssociatedPortMaps"
+              @onchange="e => deleteAssociatedPortMaps = (bool)(e.Value ?? false)" />
+            <label class="form-checkbox-label" for="deletePortMaps">
+              Also delete associated port maps
+            </label>
+          </div>
+        }
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn--secondary" @onclick="CancelDelete">Cancel</button>
+        <button class="btn btn--danger" @onclick="DeleteListener">Delete</button>
+      </div>
+    </div>
+  </div>
+}
+
+@code {
+  private List<ListenerInfoDto> listeners = new();
+  private List<PortMapInfoDto> associatedPortMaps = new();
+  private bool loading = true;
+  private string? error = null;
+  private string? modalError = null;
+  private bool showAddModal = false;
+  private bool adding = false;
+  private string? deleting = null;
+  private ListenerInfoDto? deleteTarget = null;
+  private bool deleteAssociatedPortMaps = false;
+
+  private Protocol newProtocol = Protocol.Tcp;
+  private string newPort = "";
+  private string newBindAddress = "";
+
+  private System.Timers.Timer? refreshTimer;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await LoadListeners();
+    StartAutoRefresh();
+  }
+
+  private async Task LoadListeners()
+  {
+    try
+    {
+      loading = true;
+      error = null;
+      listeners = await ApiClient.GetListenersAsync();
+    }
+    catch (Exception ex)
+    {
+      error = ex.Message;
+    }
+    finally
+    {
+      loading = false;
+      StateHasChanged();
+    }
+  }
+
+  private void StartAutoRefresh()
+  {
+    refreshTimer = new System.Timers.Timer(10000);
+    refreshTimer.Elapsed += async (sender, e) => await LoadListeners();
+    refreshTimer.Start();
+  }
+
+  private void OpenAddModal()
+  {
+    modalError = null;
+    showAddModal = true;
+  }
+
+  private void CloseAddModal()
+  {
+    showAddModal = false;
+    modalError = null;
+    newPort = "";
+    newBindAddress = "";
+  }
+
+  private async Task AddListener()
+  {
+    if (!int.TryParse(newPort, out var port))
+    {
+      modalError = "Invalid port number";
+      return;
+    }
+
+    try
+    {
+      adding = true;
+      modalError = null;
+      await ApiClient.CreateListenerAsync(new ListenerRequest
+      {
+        NetworkProtocol = newProtocol,
+        Port = port,
+        BindAddress = string.IsNullOrWhiteSpace(newBindAddress) ? null : newBindAddress
+      });
+      CloseAddModal();
+      await LoadListeners();
+    }
+    catch (Exception ex)
+    {
+      modalError = GetErrorMessage(ex);
+    }
+    finally
+    {
+      adding = false;
+    }
+  }
+
+  private async Task ConfirmDelete(ListenerInfoDto listener)
+  {
+    modalError = null;
+    deleteAssociatedPortMaps = false;
+
+    try
+    {
+      var allPortMaps = await ApiClient.GetPortMapsAsync();
+      associatedPortMaps = allPortMaps
+      .Where(pm => pm.NetworkProtocol == listener.NetworkProtocol && pm.LocalPort == listener.Port)
+      .ToList();
+    }
+    catch
+    {
+      associatedPortMaps = new();
+    }
+
+    deleteTarget = listener;
+  }
+
+  private void CancelDelete()
+  {
+    deleteTarget = null;
+    modalError = null;
+    associatedPortMaps = new();
+    deleteAssociatedPortMaps = false;
+  }
+
+  private async Task DeleteListener()
+  {
+    if (deleteTarget == null)
+    {
+      return;
+    }
+
+    var key = $"{deleteTarget.NetworkProtocol}:{deleteTarget.Port}";
+
+    try
+    {
+      deleting = key;
+      modalError = null;
+
+      if (deleteAssociatedPortMaps && associatedPortMaps.Count > 0)
+      {
+        foreach (var pm in associatedPortMaps)
+        {
+          await ApiClient.DeletePortMapAsync(pm.NetworkProtocol, pm.LocalPort, pm.PublicPort);
+        }
+      }
+
+      await ApiClient.DeleteListenerAsync(deleteTarget.NetworkProtocol, deleteTarget.Port);
+      deleteTarget = null;
+      associatedPortMaps = new();
+      deleteAssociatedPortMaps = false;
+      await LoadListeners();
+    }
+    catch (Exception ex)
+    {
+      modalError = GetErrorMessage(ex);
+    }
+    finally
+    {
+      deleting = null;
+    }
+  }
+
+  private static string GetErrorMessage(Exception ex)
+  {
+    if (ex is PmmuxApiClient.ApiException apiEx)
+    {
+      return apiEx.Message;
+    }
+
+    var message = ex.Message;
+    if (ex.GetType().Name == "JSException" && message.Contains("Failed to fetch"))
+    {
+      return "Unable to connect to the server";
+    }
+
+    if (ex is HttpRequestException)
+    {
+      return "Server error";
+    }
+
+    return string.IsNullOrWhiteSpace(message) ? "An unexpected error occurred" : message;
+  }
+
+  public void Dispose()
+  {
+    refreshTimer?.Dispose();
+  }
+}

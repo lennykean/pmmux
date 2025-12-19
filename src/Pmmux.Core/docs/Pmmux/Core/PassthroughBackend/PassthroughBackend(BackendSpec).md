@@ -4,12 +4,12 @@
 ## PassthroughBackend\(BackendSpec\) Constructor
 
 ```csharp
-public PassthroughBackend(Pmmux.Abstractions.BackendSpec backendSpec);
+public PassthroughBackend(Pmmux.Abstractions.BackendSpec spec);
 ```
 #### Parameters
 
-<a name='Pmmux.Core.PassthroughBackend.PassthroughBackend(Pmmux.Abstractions.BackendSpec).backendSpec'></a>
+<a name='Pmmux.Core.PassthroughBackend.PassthroughBackend(Pmmux.Abstractions.BackendSpec).spec'></a>
 
-`backendSpec` [BackendSpec](..\..\Pmmux.Abstractions\docs\Pmmux/Abstractions/BackendSpec/index.md 'Pmmux\.Abstractions\.BackendSpec')
+`spec` [BackendSpec](..\..\Pmmux.Abstractions\docs\Pmmux/Abstractions/BackendSpec/index.md 'Pmmux\.Abstractions\.BackendSpec')
 
 The backend specification containing connection parameters\.

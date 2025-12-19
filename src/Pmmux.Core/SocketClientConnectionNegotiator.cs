@@ -18,7 +18,7 @@ internal sealed class SocketClientConnectionNegotiator(
 {
     public string Name => "socket";
 
-    public async Task<Result> NegotiateAsync(
+    public Task<Result> NegotiateAsync(
         ClientConnectionContext context,
         Func<Task<Result>> next,
         CancellationToken cancellationToken = default)
@@ -37,7 +37,7 @@ internal sealed class SocketClientConnectionNegotiator(
             mtu = NetworkUtility.IPV4_MIN_MTU;
         }
 
-        return Result.Accept(new SocketClientConnection(
+        return Task.FromResult(Result.Accept(new SocketClientConnection(
             context.Client,
             context.Properties,
             context.ClientConnection,
@@ -45,6 +45,6 @@ internal sealed class SocketClientConnectionNegotiator(
             loggerFactory,
             mtu,
             config.PreviewSizeLimit,
-            metricReporter));
+            metricReporter)));
     }
 }

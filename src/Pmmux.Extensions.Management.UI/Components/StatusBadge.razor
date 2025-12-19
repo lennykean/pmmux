@@ -1,0 +1,38 @@
+@using Pmmux.Abstractions
+
+<span class="status-badge status-@GetStatusClass()">
+  <span class="status-dot"></span>
+  @GetStatusName()
+</span>
+
+@code {
+  [Parameter] public BackendStatus Status { get; set; }
+
+  private string GetStatusClass()
+  {
+    return Status switch
+    {
+      BackendStatus.Healthy => "healthy",
+      BackendStatus.Unhealthy => "unhealthy",
+      BackendStatus.Degraded => "degraded",
+      BackendStatus.Stabilizing => "stabilizing",
+      BackendStatus.Draining => "draining",
+      BackendStatus.Stopped => "stopped",
+      _ => "unknown"
+    };
+  }
+
+  private string GetStatusName()
+  {
+    return Status switch
+    {
+      BackendStatus.Healthy => "Healthy",
+      BackendStatus.Unhealthy => "Unhealthy",
+      BackendStatus.Degraded => "Degraded",
+      BackendStatus.Stabilizing => "Stabilizing",
+      BackendStatus.Draining => "Draining",
+      BackendStatus.Stopped => "Stopped",
+      _ => "Unknown"
+    };
+  }
+}

@@ -31,16 +31,18 @@ The `bittorrent-pass` protocol automatically detects BitTorrent handshakes and r
 
 ```sh
 pmmux \
-  -b "torrent:bittorrent-pass:ip=127.0.0.1,port=6881" \
+  -b "torrent:bittorrent-pass:target.ip=127.0.0.1,target.port=6881" \
   -p 6881:6881:tcp
 ```
 
 ### Configuration Parameters
 
-Parameter | Required | Default | Description
--|-|-|-
-`ip` | Yes | - | Target IP address
-`port` | Yes | - | Target port
+Parameter | Required | Description
+-|-|-
+`target.ip` | Yes | Target IP address
+`target.port` | Yes | Target port
+
+The `bittorrent-pass` backend also supports standard matching and routing parameters, including connection properties, IP/port matching, and priority tiers. See the [Configuration Guide](../../docs/configuration.md#common-parameters) for details.
 
 ### Protocol Detection
 
@@ -60,8 +62,8 @@ extensions = ["Pmmux.Extensions.BitTorrent.dll"]
 port-bindings = ["6881:6881:tcp"]
 
 backends = [
-  "torrent:bittorrent-pass:ip=127.0.0.1,port=6882",
-  "other:pass:ip=127.0.0.1,port=8080,priority=fallback",
+  "torrent:bittorrent-pass:target.ip=127.0.0.1,target.port=6882",
+  "other:pass:target.ip=127.0.0.1,target.port=8080,priority=fallback",
 ]
 ```
 

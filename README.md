@@ -18,7 +18,7 @@ Multiple applications and protocols are multiplexed through the same network por
 Route traffic from port 8080 to a backend web server:
 
 ```sh
-pmmux -b web:pass:ip=127.0.0.1,port=3000 -p 8080:8080:tcp
+pmmux -b web:pass:target.ip=127.0.0.1,target.port=3000 -p 8080:8080:tcp
 ```
 
 The `-p 8080:8080:tcp` option binds port 8080 locally and attempts to configure NAT port mapping via UPnP/PMP, making the service accessible from external networks.
@@ -30,7 +30,7 @@ pmmux \
   -x Pmmux.Extensions.Http.dll \
   -x Pmmux.Extensions.BitTorrent.dll \
   -b "web:http-proxy:proxy.address=http://127.0.0.1:3000" \
-  -b "torrent:bittorrent-pass:ip=127.0.0.1,port=6881" \
+  -b "torrent:bittorrent-pass:target.ip=127.0.0.1,target.port=6881" \
   -p 8080:8080:tcp
 ```
 
@@ -38,8 +38,8 @@ Health checks monitor backend availability and route traffic only to healthy ser
 
 ```sh
 pmmux \
-  -b "primary:pass:ip=127.0.0.1,port=3000" \
-  -b "fallback:pass:ip=127.0.0.1,port=3001,priority=fallback" \
+  -b "primary:pass:target.ip=127.0.0.1,target.port=3000" \
+  -b "fallback:pass:target.ip=127.0.0.1,target.port=3001,priority=fallback" \
   -z "pass:primary" \
   -p 8080:8080:tcp
 ```
@@ -54,8 +54,8 @@ port-bindings = ["8080:8080:tcp"]
 routing-strategy = "least-requests"
 
 backends = [
-  "web:pass:ip=127.0.0.1,port=3000",
-  "api:pass:ip=127.0.0.1,port=4000",
+  "web:pass:target.ip=127.0.0.1,target.port=3000",
+  "api:pass:target.ip=127.0.0.1,target.port=4000",
 ]
 
 health-checks = ["pass"]
@@ -78,7 +78,7 @@ The plugin architecture allows extending pmmux with custom backend protocols, ro
 
 Protocol | Description
 -|-
-`pass` | Passthrough - forwards connections to another TCP/UDP endpoint (`ip`, `port`)
+`pass` | Passthrough - forwards connections to another TCP/UDP endpoint (`target.ip`, `target.port`)
 `noop` | No-op - accepts and discards traffic
 
 ## Standard Extensions

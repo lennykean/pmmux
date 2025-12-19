@@ -12,4 +12,3 @@ and perform TLS handshakes before routing\.
 | Namespaces | |
 | :--- | :--- |
 | [Pmmux\.Extensions\.Tls](Pmmux/Extensions/Tls/index.md 'Pmmux\.Extensions\.Tls') | |
-| [Pmmux\.Extensions\.Tls\.Dtos](Pmmux/Extensions/Tls/Dtos/index.md 'Pmmux\.Extensions\.Tls\.Dtos') | |

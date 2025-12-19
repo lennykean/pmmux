@@ -1,6 +1,5 @@
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -9,7 +8,7 @@ using Microsoft.AspNetCore.Routing;
 
 using Pmmux.Abstractions;
 using Pmmux.Extensions.Management.Abstractions;
-using Pmmux.Extensions.Management.Dtos;
+using Pmmux.Extensions.Management.Models;
 
 namespace Pmmux.Extensions.Management;
 
@@ -19,49 +18,38 @@ internal class PortmapEndpointGroup(IPortWarden portWarden) : IManagementEndpoin
 
     public void MapEndpoints(IEndpointRouteBuilder builder)
     {
-        builder.MapGet("", () =>
+        builder.MapGet("", () => ExecutionContextUtility.SuppressFlow(() =>
         {
-            using (ExecutionContext.SuppressFlow())
-            {
-                return portWarden.GetPortMaps().Select(PortMapDto.FromPortMapInfo).ToList();
-            }
-        });
+            return Results.Ok(portWarden.GetPortMaps().Select(m => m.ToDto()).ToList());
+        }));
 
-        builder.MapGet("/device", () =>
+        builder.MapGet("/device", () => ExecutionContextUtility.SuppressFlow(() =>
         {
-            using (ExecutionContext.SuppressFlow())
+            if (portWarden.NatDevice is { } device)
             {
-                return portWarden.NatDevice is { } device
-                    ? Results.Ok(NatDeviceDto.FromNatDeviceInfo(device))
-                    : Results.NotFound();
+                return Results.Ok(device.ToDto());
             }
-        });
+            return Results.NotFound();
+        }));
 
-        builder.MapPost("", async (
-            [FromBody] PortRequestDto request,
-            CancellationToken cancellationToken) =>
+        builder.MapPost("", (
+            [FromBody] PortMapRequest request,
+            CancellationToken cancellationToken) => ExecutionContextUtility.SuppressFlow(async () =>
         {
-            Task<PortMapInfo?> task;
-
-            using (ExecutionContext.SuppressFlow())
+            if (await portWarden.AddPortMapAsync(
+                request.NetworkProtocol,
+                request.LocalPort,
+                request.PublicPort,
+                cancellationToken).ConfigureAwait(false) is not { } mapping)
             {
-                task = Task.Run(async () =>
-                {
-                    return await portWarden.AddPortMapAsync(
-                        request.NetworkProtocol,
-                        request.LocalPort,
-                        request.PublicPort,
-                        cancellationToken);
-                });
+                return Results.InternalServerError();
             }
-            return await task.ConfigureAwait(false) is { } mapping
-                ? Results.Ok(PortMapDto.FromPortMapInfo(mapping))
-                : Results.InternalServerError();
-        });
+            return Results.Ok(mapping.ToDto());
+        }));
 
-        builder.MapDelete("", async (
-            [FromBody] PortRequestDto request,
-            CancellationToken cancellationToken) =>
+        builder.MapDelete("", (
+            [FromBody] PortMapRequest request,
+            CancellationToken cancellationToken) => ExecutionContextUtility.SuppressFlow(async () =>
         {
             if (request.LocalPort is null || request.PublicPort is null)
             {
@@ -71,7 +59,7 @@ internal class PortmapEndpointGroup(IPortWarden portWarden) : IManagementEndpoin
                 request.NetworkProtocol,
                 request.LocalPort.Value,
                 request.PublicPort.Value,
-                cancellationToken));
-        });
+                cancellationToken).ConfigureAwait(false));
+        }));
     }
 }

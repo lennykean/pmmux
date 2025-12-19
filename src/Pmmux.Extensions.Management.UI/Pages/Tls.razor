@@ -1,0 +1,556 @@
+@page "/tls"
+@using System.IO;
+@using Microsoft.AspNetCore.Components.Forms
+@using Pmmux.Extensions.Management.Models
+@using Pmmux.Extensions.Tls.Abstractions
+@using Pmmux.Extensions.Management.UI.Services
+@inject PmmuxApiClient ApiClient
+
+<PageTitle>TLS - Pmmux</PageTitle>
+
+@if (!tlsAvailable)
+{
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header__content">
+        <h2 class="card-header__title">TLS Certificates</h2>
+        <p class="card-header__subtitle">Manage SSL/TLS certificates for secure connections</p>
+      </div>
+    </div>
+    <div class="card-body card-body--no-padding">
+      <div class="empty-state">
+        <div class="empty-state__icon">
+          <i class="ph ph-shield-check"></i>
+        </div>
+        <h3 class="empty-state__title">TLS extension not available</h3>
+        <p class="empty-state__description">
+          The TLS extension is not loaded. Enable it with --tls-enable to manage certificates.
+        </p>
+      </div>
+    </div>
+  </div>
+}
+else
+{
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header__content">
+        <h2 class="card-header__title">Certificates</h2>
+        <p class="card-header__subtitle">Uploaded SSL/TLS certificates</p>
+      </div>
+      <div class="card-header__actions">
+        <button class="btn btn--primary" @onclick="OpenUploadModal">
+          <i class="ph ph-upload-simple"></i>
+          Upload Certificate
+        </button>
+      </div>
+    </div>
+    <div class="card-body card-body--no-padding">
+      @if (certificates.Count == 0)
+      {
+        <div class="empty-state">
+          <div class="empty-state__icon">
+            <i class="ph ph-certificate"></i>
+          </div>
+          <h3 class="empty-state__title">No certificates uploaded</h3>
+          <p class="empty-state__description">
+            Upload certificates to enable TLS.
+          </p>
+          <button class="btn btn--primary" @onclick="OpenUploadModal">Upload Certificate</button>
+        </div>
+      }
+      else
+      {
+        <div class="table-wrapper">
+          <table class="table">
+            <thead class="table-head">
+              <tr class="table-row">
+                <th class="table-header">Certificate Name</th>
+                <th class="table-header table-cell--right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="table-body">
+              @foreach (var cert in certificates)
+              {
+                <tr class="table-row" @key="cert">
+                  <td class="table-cell">
+                    <code>@cert</code>
+                  </td>
+                  <td class="table-cell table-cell--right">
+                    <button class="btn btn--danger btn--sm" @onclick="() => ConfirmDeleteCert(cert)"
+                      disabled="@(deletingCert == cert)">
+                      @if (deletingCert == cert)
+                      {
+                        <span class="loading-spinner"></span>
+                      }
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: var(--space-xl);">
+    <div class="card-header">
+      <div class="card-header__content">
+        <h2 class="card-header__title">Certificate Mappings</h2>
+        <p class="card-header__subtitle">Hostname to certificate associations</p>
+      </div>
+      <div class="card-header__actions">
+        <button class="btn btn--primary" @onclick="OpenMappingModal">
+          <i class="ph ph-plus"></i>
+          Add Mapping
+        </button>
+      </div>
+    </div>
+    <div class="card-body card-body--no-padding">
+      @if (mappings.Count == 0)
+      {
+        <div class="empty-state">
+          <div class="empty-state__icon">
+            <i class="ph ph-link"></i>
+          </div>
+          <h3 class="empty-state__title">No certificate mappings</h3>
+          <p class="empty-state__description">
+            Map hostnames to certificates for SNI-based certificate selection.
+          </p>
+          <button class="btn btn--primary" @onclick="OpenMappingModal">Add Mapping</button>
+        </div>
+      }
+      else
+      {
+        <div class="table-wrapper">
+          <table class="table">
+            <thead class="table-head">
+              <tr class="table-row">
+                <th class="table-header">Hostname</th>
+                <th class="table-header">Certificate</th>
+                <th class="table-header table-cell--right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="table-body">
+              @foreach (var mapping in mappings)
+              {
+                <tr class="table-row" @key="mapping.Hostname">
+                  <td class="table-cell">
+                    <code>@mapping.Hostname</code>
+                  </td>
+                  <td class="table-cell">
+                    <code>@mapping.CertificateName</code>
+                  </td>
+                  <td class="table-cell table-cell--right">
+                    <button class="btn btn--danger btn--sm" @onclick="() => ConfirmDeleteMapping(mapping)"
+                      disabled="@(deletingMapping == mapping.Hostname)">
+                      @if (deletingMapping == mapping.Hostname)
+                      {
+                        <span class="loading-spinner"></span>
+                      }
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+@if (showUploadModal)
+{
+  <div class="modal-overlay" @onclick="CloseUploadModal">
+    <div class="modal" @onclick:stopPropagation="true">
+      <div class="modal-header">
+        <h3 class="modal-title">Upload Certificate</h3>
+      </div>
+      <div class="modal-body">
+        @if (modalError != null)
+        {
+          <div class="modal-error">@modalError</div>
+        }
+        <div class="form-group">
+          <label class="form-label">Certificate Name</label>
+          <input class="form-input" type="text" placeholder="my-cert" @bind="uploadName" @bind:event="oninput" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Certificate Type</label>
+          <select class="form-select" @bind="uploadType">
+            <option value="@CertificateType.Pfx">PFX / PKCS#12</option>
+            <option value="@CertificateType.Pem">PEM</option>
+            <option value="@CertificateType.Der">DER</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Certificate File</label>
+          <InputFile class="form-file-input" OnChange="OnFileSelected" accept=".pfx,.p12,.pem,.crt,.cer,.der" />
+          @if (uploadFile != null)
+          {
+            <p class="form-hint">Selected: @uploadFile.Name (@FormatFileSize(uploadFile.Size))</p>
+          }
+        </div>
+        @if (uploadType == CertificateType.Pfx)
+        {
+          <div class="form-group">
+            <label class="form-label">Password (for PFX)</label>
+            <input class="form-input" type="password" placeholder="Certificate password" @bind="uploadPassword"
+              @bind:event="oninput" />
+          </div>
+        }
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn--secondary" @onclick="CloseUploadModal">Cancel</button>
+        <button class="btn btn--primary" @onclick="UploadCertificate"
+          disabled="@(uploading || string.IsNullOrEmpty(uploadName) || uploadFile == null)">
+          @if (uploading)
+          {
+            <span class="loading-spinner"></span>
+          }
+          Upload
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showMappingModal)
+{
+  <div class="modal-overlay" @onclick="CloseMappingModal">
+    <div class="modal" @onclick:stopPropagation="true">
+      <div class="modal-header">
+        <h3 class="modal-title">Add Certificate Mapping</h3>
+      </div>
+      <div class="modal-body">
+        @if (modalError != null)
+        {
+          <div class="modal-error">@modalError</div>
+        }
+        <div class="form-group">
+          <label class="form-label">Hostname</label>
+          <input class="form-input" type="text" placeholder="*.example.com" @bind="mappingHostname"
+            @bind:event="oninput" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Certificate</label>
+          <select class="form-select" @bind="mappingCert">
+            <option value="">Select a certificate</option>
+            @foreach (var cert in certificates)
+            {
+              <option value="@cert">@cert</option>
+            }
+          </select>
+        </div>
+        <p class="form-hint">
+          Use * as wildcard for subdomains (e.g., *.example.com).
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn--secondary" @onclick="CloseMappingModal">Cancel</button>
+        <button class="btn btn--primary" @onclick="AddMapping"
+          disabled="@(addingMapping || string.IsNullOrEmpty(mappingHostname) || string.IsNullOrEmpty(mappingCert))">
+          @if (addingMapping)
+          {
+            <span class="loading-spinner"></span>
+          }
+          Add Mapping
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (deleteCertTarget != null)
+{
+  <div class="modal-overlay" @onclick="CancelDeleteCert">
+    <div class="modal" @onclick:stopPropagation="true">
+      <div class="modal-header">
+        <h3 class="modal-title">Delete Certificate</h3>
+      </div>
+      <div class="modal-body">
+        @if (modalError != null)
+        {
+          <div class="modal-error">@modalError</div>
+        }
+        <div class="confirm-content">
+          <p>Delete certificate <strong>@deleteCertTarget</strong>?</p>
+          <p>Any mappings using this certificate will stop working.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn--secondary" @onclick="CancelDeleteCert">Cancel</button>
+        <button class="btn btn--danger" @onclick="DeleteCertificate">Delete</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (deleteMappingTarget != null)
+{
+  <div class="modal-overlay" @onclick="CancelDeleteMapping">
+    <div class="modal" @onclick:stopPropagation="true">
+      <div class="modal-header">
+        <h3 class="modal-title">Delete Mapping</h3>
+      </div>
+      <div class="modal-body">
+        @if (modalError != null)
+        {
+          <div class="modal-error">@modalError</div>
+        }
+        <div class="confirm-content">
+          <p>Delete mapping for <strong>@deleteMappingTarget.Hostname</strong>?</p>
+          <p>TLS connections to this hostname will use the default certificate.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn--secondary" @onclick="CancelDeleteMapping">Cancel</button>
+        <button class="btn btn--danger" @onclick="DeleteMapping">Delete</button>
+      </div>
+    </div>
+  </div>
+}
+
+@code {
+  private List<string> certificates = new();
+  private List<CertificateMappingDto> mappings = new();
+  private bool tlsAvailable = false;
+  private string? modalError = null;
+
+  // Upload modal
+  private bool showUploadModal = false;
+  private bool uploading = false;
+  private string uploadName = "";
+  private CertificateType uploadType = CertificateType.Pfx;
+  private string uploadPassword = "";
+  private IBrowserFile? uploadFile = null;
+
+  // Mapping modal
+  private bool showMappingModal = false;
+  private bool addingMapping = false;
+  private string mappingHostname = "";
+  private string mappingCert = "";
+
+  // Delete state
+  private string? deleteCertTarget = null;
+  private string? deletingCert = null;
+  private CertificateMappingDto? deleteMappingTarget = null;
+  private string? deletingMapping = null;
+
+  protected override async Task OnInitializedAsync()
+  {
+    tlsAvailable = await ApiClient.IsTlsAvailableAsync();
+    if (tlsAvailable)
+    {
+      await LoadData();
+    }
+  }
+
+  private async Task LoadData()
+  {
+    certificates = await ApiClient.GetCertificatesAsync();
+    mappings = await ApiClient.GetCertificateMappingsAsync();
+    StateHasChanged();
+  }
+
+  private void OpenUploadModal()
+  {
+    modalError = null;
+    showUploadModal = true;
+  }
+
+  private void CloseUploadModal()
+  {
+    showUploadModal = false;
+    modalError = null;
+    uploadName = "";
+    uploadType = CertificateType.Pfx;
+    uploadPassword = "";
+    uploadFile = null;
+  }
+
+  private void OnFileSelected(InputFileChangeEventArgs e)
+  {
+    uploadFile = e.File;
+  }
+
+  private async Task UploadCertificate()
+  {
+    if (uploadFile == null)
+    {
+      return;
+    }
+    try
+    {
+      uploading = true;
+      modalError = null;
+
+      using var stream = uploadFile.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024); // 10MB max
+      using var ms = new MemoryStream();
+      await stream.CopyToAsync(ms);
+      var data = ms.ToArray();
+
+      await ApiClient.UploadCertificateAsync(
+      uploadName,
+      uploadType,
+      data,
+      uploadType == CertificateType.Pfx && !string.IsNullOrEmpty(uploadPassword) ? uploadPassword : null
+      );
+
+      CloseUploadModal();
+      await LoadData();
+    }
+    catch (Exception ex)
+    {
+      modalError = GetErrorMessage(ex);
+    }
+    finally
+    {
+      uploading = false;
+    }
+  }
+
+  private static string FormatFileSize(long bytes)
+  {
+    return bytes switch
+    {
+      _ when bytes < 1024 => $"{bytes} B",
+      _ when bytes < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
+      _ when bytes < 1024 * 1024 * 1024 => $"{bytes / (1024.0 * 1024.0):F1} MB",
+      _ => $"{bytes / (1024.0 * 1024.0 * 1024.0):F1} GB"
+    };
+  }
+
+  private void OpenMappingModal()
+  {
+    modalError = null;
+    showMappingModal = true;
+  }
+
+  private void CloseMappingModal()
+  {
+    showMappingModal = false;
+    modalError = null;
+    mappingHostname = "";
+    mappingCert = "";
+  }
+
+  private async Task AddMapping()
+  {
+    try
+    {
+      addingMapping = true;
+      modalError = null;
+      await ApiClient.CreateCertificateMappingAsync(new CertificateMappingDto(mappingHostname, mappingCert));
+      CloseMappingModal();
+      await LoadData();
+    }
+    catch (Exception ex)
+    {
+      modalError = GetErrorMessage(ex);
+    }
+    finally
+    {
+      addingMapping = false;
+    }
+  }
+
+  private void ConfirmDeleteCert(string name)
+  {
+    modalError = null;
+    deleteCertTarget = name;
+  }
+
+  private void CancelDeleteCert()
+  {
+    deleteCertTarget = null;
+    modalError = null;
+  }
+
+  private async Task DeleteCertificate()
+  {
+    if (deleteCertTarget == null)
+    {
+      return;
+    }
+
+    try
+    {
+      deletingCert = deleteCertTarget;
+      modalError = null;
+      await ApiClient.DeleteCertificateAsync(deleteCertTarget);
+      deleteCertTarget = null;
+      await LoadData();
+    }
+    catch (Exception ex)
+    {
+      modalError = GetErrorMessage(ex);
+    }
+    finally
+    {
+      deletingCert = null;
+    }
+  }
+
+  private void ConfirmDeleteMapping(CertificateMappingDto mapping)
+  {
+    modalError = null;
+    deleteMappingTarget = mapping;
+  }
+
+  private void CancelDeleteMapping()
+  {
+    deleteMappingTarget = null;
+    modalError = null;
+  }
+
+  private async Task DeleteMapping()
+  {
+    if (deleteMappingTarget == null)
+    {
+      return;
+    }
+
+    try
+    {
+      deletingMapping = deleteMappingTarget.Hostname;
+      modalError = null;
+      await ApiClient.DeleteCertificateMappingAsync(deleteMappingTarget.Hostname);
+      deleteMappingTarget = null;
+      await LoadData();
+    }
+    catch (Exception ex)
+    {
+      modalError = GetErrorMessage(ex);
+    }
+    finally
+    {
+      deletingMapping = null;
+    }
+  }
+
+  private static string GetErrorMessage(Exception ex)
+  {
+    if (ex is PmmuxApiClient.ApiException apiEx)
+    {
+      return apiEx.Message;
+    }
+
+    var message = ex.Message;
+    if (ex.GetType().Name == "JSException" && message.Contains("Failed to fetch"))
+    {
+      return "Unable to connect to the server";
+    }
+
+    if (ex is HttpRequestException)
+    {
+      return "Server error";
+    }
+
+    return string.IsNullOrWhiteSpace(message) ? "An unexpected error occurred" : message;
+  }
+}

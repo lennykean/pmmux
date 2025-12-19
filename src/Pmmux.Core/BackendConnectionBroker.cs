@@ -192,17 +192,15 @@ internal class BackendConnectionBroker(
 
     public async Task DrainAsync(CancellationToken cancellationToken = default)
     {
-        if (_state.Is(State.Dispose))
-        {
-            throw new ObjectDisposedException(nameof(BackendConnectionBroker));
-        }
+        ObjectDisposedException.ThrowIf(_state.Is(State.Dispose), nameof(BackendConnectionBroker));
+
         if (!_state.TryTransition(to: State.Drain, from: State.Initialized))
         {
             throw new InvalidOperationException();
         }
         await StopMonitorAsync().ConfigureAwait(false);
         Status = new(Backend, BackendStatus.Draining);
-        Logger.LogDebug("status changed: {BackendStatus} ({Reason})", Status.Status, Status.StatusReason);
+        Logger.LogDebug("status changed: {BackendStatus}", Status.Status);
 
         await Task.WhenAll(_connections.Values.Select(async brokerTask =>
         {
@@ -249,7 +247,7 @@ internal class BackendConnectionBroker(
             if (Status.Status is not BackendStatus.Stopped)
             {
                 Status = new(Backend, BackendStatus.Stopped);
-                Logger.LogDebug("status changed: {BackendStatus} ({Reason})", Status.Status, Status.StatusReason);
+                Logger.LogDebug("status changed: {BackendStatus}", Status.Status);
             }
 
             Logger.LogTrace("connection broker disposed");

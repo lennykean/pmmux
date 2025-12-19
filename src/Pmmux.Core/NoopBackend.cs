@@ -9,7 +9,8 @@ using Pmmux.Abstractions;
 
 namespace Pmmux.Core;
 
-internal sealed class NoopBackend(BackendSpec spec) : IConnectionOrientedBackend, IConnectionlessBackend
+internal sealed class NoopBackend(BackendSpec spec)
+    : BackendBase(spec, [], PriorityTier.Fallback), IConnectionOrientedBackend, IConnectionlessBackend
 {
     public sealed class Protocol : IBackendProtocol
     {
@@ -49,25 +50,7 @@ internal sealed class NoopBackend(BackendSpec spec) : IConnectionOrientedBackend
         }
     }
 
-    public BackendInfo Backend { get; } = new(spec, new Dictionary<string, string>(), PriorityTier.Fallback);
-
-    public Task<IConnection> CreateBackendConnectionAsync(
-        IClientConnection client,
-        CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult<IConnection>(new NoopConnection());
-    }
-
-    public Task HandleMessageAsync(
-        ClientInfo client,
-        Dictionary<string, string> messageMetadata,
-        byte[] message,
-        CancellationToken cancellationToken = default)
-    {
-        return Task.CompletedTask;
-    }
-
-    public Task InitializeAsync(CancellationToken cancellationToken = default)
+    public override Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         return Task.CompletedTask;
     }
@@ -83,21 +66,37 @@ internal sealed class NoopBackend(BackendSpec spec) : IConnectionOrientedBackend
         IClientConnectionPreview preview,
         CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(true);
+        return Task.FromResult(MatchesClient(preview.Client, preview.Properties));
     }
 
     public Task<bool> CanHandleMessageAsync(
         ClientInfo client,
-        Dictionary<string, string> messageMetadata,
+        Dictionary<string, string> messageProperties,
         ReadOnlyMemory<byte> message,
         CancellationToken cancellationToken = default)
     {
-        return Task.FromResult(true);
+        return Task.FromResult(MatchesClient(client, messageProperties));
     }
 
-    public ValueTask DisposeAsync()
+    public Task<IConnection> CreateBackendConnectionAsync(
+        IClientConnection client,
+        CancellationToken cancellationToken = default)
     {
-        return default;
+        return Task.FromResult<IConnection>(new NoopConnection());
+    }
+
+    public Task HandleMessageAsync(
+        ClientInfo client,
+        Dictionary<string, string> messageProperties,
+        byte[] message,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
+
+    public override ValueTask DisposeAsync()
+    {
+        return ValueTask.CompletedTask;
     }
 }
 

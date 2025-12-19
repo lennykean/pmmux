@@ -15,10 +15,11 @@ Implements [System\.IEquatable&lt;](https://learn.microsoft.com/en-us/dotnet/api
 
 | Constructors | |
 | :--- | :--- |
-| [PortMapConfig\(Protocol, Nullable&lt;int&gt;, Nullable&lt;int&gt;\)](PortMapConfig(Protocol,Nullable_int_,Nullable_int_).md 'Pmmux\.Core\.Configuration\.PortWardenConfig\.PortMapConfig\.PortMapConfig\(Mono\.Nat\.Protocol, System\.Nullable\<int\>, System\.Nullable\<int\>\)') | Represents a NAT port mapping configuration\. |
+| [PortMapConfig\(Protocol, Nullable&lt;int&gt;, Nullable&lt;int&gt;, Nullable&lt;int&gt;\)](PortMapConfig(Protocol,Nullable_int_,Nullable_int_,Nullable_int_).md 'Pmmux\.Core\.Configuration\.PortWardenConfig\.PortMapConfig\.PortMapConfig\(Mono\.Nat\.Protocol, System\.Nullable\<int\>, System\.Nullable\<int\>, System\.Nullable\<int\>\)') | Represents a NAT port mapping configuration\. |
 
 | Properties | |
 | :--- | :--- |
+| [Index](Index.md 'Pmmux\.Core\.Configuration\.PortWardenConfig\.PortMapConfig\.Index') | The index that correlates this mapping to a listener binding configuration\. |
 | [LocalPort](LocalPort.md 'Pmmux\.Core\.Configuration\.PortWardenConfig\.PortMapConfig\.LocalPort') | Local port to map\. |
 | [NetworkProtocol](NetworkProtocol.md 'Pmmux\.Core\.Configuration\.PortWardenConfig\.PortMapConfig\.NetworkProtocol') | Network protocol \(TCP or UDP\) for the port mapping\. |
 | [PublicPort](PublicPort.md 'Pmmux\.Core\.Configuration\.PortWardenConfig\.PortMapConfig\.PublicPort') | Public port to request on the NAT device\. |

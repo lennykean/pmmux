@@ -11,4 +11,10 @@ namespace Pmmux.Abstractions;
 /// <param name="PublicEndpoint">The public endpoint accessible from outside the LAN.</param>
 /// <param name="LocalPort">The local port that receives traffic forwarded from the public port.</param>
 /// <param name="NatProtocol">The NAT protocol used to create the mapping.</param>
-public record PortMapInfo(Protocol NetworkProtocol, IPEndPoint PublicEndpoint, int LocalPort, NatProtocol NatProtocol);
+/// <param name="Index">The index that correlates this mapping to a listener binding configuration.</param>
+public record PortMapInfo(
+    Protocol NetworkProtocol,
+    IPEndPoint PublicEndpoint,
+    int LocalPort,
+    NatProtocol NatProtocol,
+    int? Index = null);
