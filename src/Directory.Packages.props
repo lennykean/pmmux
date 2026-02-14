@@ -34,5 +34,8 @@
     <PackageVersion Include="System.Threading.Channels" Version="[9,11)" />
     <PackageVersion Include="TopShelf.ServiceInstaller" Version="[4.3,5)" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="[2.3,3)" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="[17.12,18)" />
+    <PackageVersion Include="NUnit" Version="[3.14,4)" />
+    <PackageVersion Include="NUnit3TestAdapter" Version="[4.6,5)" />
   </ItemGroup>
 </Project>

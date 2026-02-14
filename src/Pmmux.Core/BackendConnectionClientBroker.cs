@@ -107,7 +107,7 @@ internal class BackendConnectionClientBroker(
 
             _logger.LogTrace("client connection broker disposed");
 
-            _disposedTsc.SetResult(true);
+            _disposedTsc.TrySetResult(true);
         }
     }
 

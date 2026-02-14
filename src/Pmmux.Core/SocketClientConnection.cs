@@ -128,19 +128,24 @@ internal class SocketClientConnection(
             return;
         }
 
-        if (_activePreview is not null)
+        try
         {
-            await _activePreview.DisposeAsync().ConfigureAwait(false);
+            if (_activePreview is not null)
+            {
+                await _activePreview.DisposeAsync().ConfigureAwait(false);
+            }
+
+            await CloseInternalAsync().ConfigureAwait(false);
         }
+        finally
+        {
+            _workerCts.Dispose();
+            _previewBuffer.Dispose();
+            clientStream.Dispose();
+            clientSocket.Dispose();
 
-        await CloseInternalAsync().ConfigureAwait(false);
-
-        _disposedTsc.SetResult(true);
-
-        _workerCts.Dispose();
-        _previewBuffer.Dispose();
-        clientStream.Dispose();
-        clientSocket.Dispose();
+            _disposedTsc.SetResult(true);
+        }
     }
 
     private async Task ReadClientStreamAsync()
@@ -203,7 +208,7 @@ internal class SocketClientConnection(
                 return;
             }
         }
-        await _ingressPipe.Writer.FlushAsync(_workerCts.Token).ConfigureAwait(false);
+        await _ingressPipe.Writer.FlushAsync().ConfigureAwait(false);
         await _ingressPipe.Writer.CompleteAsync().ConfigureAwait(false);
     }
 
@@ -221,6 +226,11 @@ internal class SocketClientConnection(
                         _workerCts.Token).ConfigureAwait(false)).ConfigureAwait(false);
 
                 if (result.IsCanceled)
+                {
+                    break;
+                }
+
+                if (result.Buffer.IsEmpty && result.IsCompleted)
                 {
                     break;
                 }
@@ -254,7 +264,12 @@ internal class SocketClientConnection(
 
     private async Task CloseInternalAsync()
     {
+        await _egressPipe.Writer.CompleteAsync().ConfigureAwait(false);
+        await _egressTask.ConfigureAwait(false);
+
         _workerCts.Cancel();
+
+        await _ingressTask.ConfigureAwait(false);
 
         try
         {
@@ -275,8 +290,6 @@ internal class SocketClientConnection(
         catch
         {
         }
-
-        await Task.WhenAll(_ingressTask, _egressTask).ConfigureAwait(false);
     }
 }
 

@@ -140,7 +140,7 @@ internal class BackendConnectionBroker(
                     clientConnection,
                     loggerFactory);
 
-                connectionBroker.ClientConnectionClosed += (_, e) =>
+                connectionBroker.ClientConnectionClosed += async (_, e) =>
                 {
                     Logger.LogTrace("client connection closed");
 
@@ -156,9 +156,9 @@ internal class BackendConnectionBroker(
                         _connections.Count,
                         _baseMetadata);
 
-                    _ = connectionBroker.DisposeAsync();
+                    await connectionBroker.DisposeAsync();
                 };
-                connectionBroker.BackendConnectionClosed += (_, e) =>
+                connectionBroker.BackendConnectionClosed += async (_, e) =>
                 {
                     Logger.LogTrace("backend connection closed");
 
@@ -174,7 +174,7 @@ internal class BackendConnectionBroker(
                         _connections.Count,
                         _baseMetadata);
 
-                    _ = connectionBroker.DisposeAsync();
+                    await connectionBroker.DisposeAsync();
                 };
                 return connectionBroker;
             }, (_, _) => throw new InvalidOperationException()).ConfigureAwait(false);
