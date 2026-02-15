@@ -70,6 +70,7 @@ public sealed class PortMultiplexer(
 
             var bindings =
                 from binding in config.PortBindings
+                where binding.Listen
                 join portMap in mappedPorts on
                     new { binding.Index, binding.NetworkProtocol } equals
                     new { portMap.Index, portMap.NetworkProtocol } into portMaps
