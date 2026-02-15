@@ -26,5 +26,5 @@ public record ListenerConfig
     /// <summary>List of port bindings for the listener.</summary>
     public IEnumerable<BindingConfig> PortBindings { get; init; } = [];
     /// <summary>Maximum queue length for incoming connections.</summary>
-    public int QueueLength { get; init; } = 100;
+    public int QueueLength { get; init; } = 256;
 }

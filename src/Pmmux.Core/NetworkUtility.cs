@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -14,6 +15,8 @@ namespace Pmmux.Core;
 internal static class NetworkUtility
 {
     internal const int IPV4_MIN_MTU = 576;
+
+    private static readonly ConcurrentDictionary<IPAddress, int?> _mtuCache = new();
 
     public static async Task<INatDevice> FindNatDeviceAsync(
         IPAddress[] gateways,
@@ -122,28 +125,37 @@ internal static class NetworkUtility
         {
             return false;
         }
-        var listenerNic = (
-            from nic in NetworkInterface.GetAllNetworkInterfaces()
-            where nic.OperationalStatus == OperationalStatus.Up
-            where nic.GetIPProperties().UnicastAddresses.Any(address => address.Address.Equals(localEndpoint.Address))
-            select nic).FirstOrDefault();
 
-        if (listenerNic is null)
+        var cached = _mtuCache.GetOrAdd(localEndpoint.Address, static address =>
+        {
+            var nic = (
+                from n in NetworkInterface.GetAllNetworkInterfaces()
+                where n.OperationalStatus == OperationalStatus.Up
+                where n.GetIPProperties().UnicastAddresses.Any(a => a.Address.Equals(address))
+                select n).FirstOrDefault();
+
+            if (nic is null)
+            {
+                return null;
+            }
+
+            var ipProps = nic.GetIPProperties();
+            var ifMtu = address.AddressFamily switch
+            {
+                AddressFamily.InterNetwork => ipProps?.GetIPv4Properties()?.Mtu,
+                AddressFamily.InterNetworkV6 => ipProps?.GetIPv6Properties()?.Mtu,
+                _ => null
+            };
+
+            return ifMtu is > 0 ? ifMtu : null;
+        });
+
+        if (cached is not { } value)
         {
             return false;
         }
-        var interfaceMtu = socket.AddressFamily switch
-        {
-            AddressFamily.InterNetwork => listenerNic.GetIPProperties()?.GetIPv4Properties()?.Mtu,
-            AddressFamily.InterNetworkV6 => listenerNic.GetIPProperties()?.GetIPv6Properties()?.Mtu,
-            _ => null
-        };
-        if (interfaceMtu is null or <= 0)
-        {
-            return false;
-        }
-        mtu = (int)interfaceMtu;
 
+        mtu = value;
         return true;
     }
 }
