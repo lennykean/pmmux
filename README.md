@@ -89,6 +89,7 @@ Extension | Description | Documentation
 **TLS** | TLS encryption and SNI-based routing | [README](src/Pmmux.Extensions.Tls/README.md)
 **Management** | REST API for runtime management | [README](src/Pmmux.Extensions.Management/README.md)
 **OTLP** | OpenTelemetry metrics export | [README](src/Pmmux.Extensions.Otlp/README.md)
+**ACME** | Automatic TLS certificates via Let's Encrypt | [README](src/Pmmux.Extensions.Acme/README.md)
 **BitTorrent** | BitTorrent protocol detection | [README](src/Pmmux.Extensions.BitTorrent/README.md)
 
 ## Service Installation

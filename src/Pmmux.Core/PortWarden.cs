@@ -73,7 +73,8 @@ public sealed class PortWarden(
                          : [config.NatProtocol.Value]));
 
                 _natDevice = await NetworkUtility.FindNatDeviceAsync(gateways, config.NatProtocol, linkedCts.Token)
-                    .WithTimeout(timeoutCts.Token);
+                    .WithTimeout(timeoutCts.Token)
+                    .ConfigureAwait(false);
 
                 var natDeviceInfo = _natDevice.DeviceInfo();
 

@@ -3,7 +3,7 @@
 
 ## ICertificateManager\.TryAddMapping\(string, string\) Method
 
-Maps a hostname to a certificate name\.
+Maps a hostname to a certificate name\. Returns `false` if the mapping already exists\.
 
 ```csharp
 bool TryAddMapping(string hostname, string certificateName);
