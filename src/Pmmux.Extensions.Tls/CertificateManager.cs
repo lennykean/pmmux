@@ -115,12 +115,26 @@ internal class CertificateManager(ILoggerFactory loggerFactory, TlsConfig tlsCon
         return false;
     }
 
+    public void ReplaceCertificate(string certificateName, X509Certificate certificate)
+    {
+        _logger.LogTrace("replacing certificate {CertificateName}", certificateName);
+
+        _certificates.AddOrUpdate(certificateName, certificate, (_, old) =>
+        {
+            old?.Dispose();
+            return certificate;
+        });
+
+        _logger.LogDebug("replaced certificate {CertificateName}", certificateName);
+    }
+
     public bool RemoveCertificate(string certificateName)
     {
         _logger.LogTrace("removing certificate '{CertificateName}'", certificateName);
-        var removed = _certificates.TryRemove(certificateName, out _);
+        var removed = _certificates.TryRemove(certificateName, out var old);
         if (removed)
         {
+            old?.Dispose();
             _logger.LogDebug("removed certificate '{CertificateName}'", certificateName);
         }
         return removed;

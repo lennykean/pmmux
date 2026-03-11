@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>$(MSBuildProjectName)</AssemblyName>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ILRepack.Lib.MSBuild.Task">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Certes">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
+    <PackageReference Include="System.IO.FileSystem.AccessControl" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pmmux.Core\Pmmux.Core.csproj" />
+    <ProjectReference Include="..\Pmmux.Extensions.Acme.Abstractions\Pmmux.Extensions.Acme.Abstractions.csproj" />
+    <ProjectReference Include="..\Pmmux.Extensions.Tls.Abstractions\Pmmux.Extensions.Tls.Abstractions.csproj" />
+  </ItemGroup>
+</Project>
