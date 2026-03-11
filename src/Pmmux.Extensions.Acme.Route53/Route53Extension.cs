@@ -35,12 +35,19 @@ public sealed class Route53Extension : IExtension
         Description = "path to AWS shared credentials file for Route 53 DNS provider",
     };
 
+    internal static Option<string?> RegionOption { get; } = new("--acme-route53-region")
+    {
+        Description = "AWS region for Route 53 DNS provider",
+        DefaultValueFactory = _ => "us-east-1"
+    };
+
     void IExtension.RegisterCommandOptions(ICommandLineBuilder builder)
     {
         builder.Add(AccessKeyIdOption);
         builder.Add(SecretAccessKeyOption);
         builder.Add(CredentialProfileOption);
         builder.Add(CredentialFileOption);
+        builder.Add(RegionOption);
     }
 
     void IExtension.RegisterServices(IServiceCollection services, HostBuilderContext hostContext)
@@ -53,6 +60,7 @@ public sealed class Route53Extension : IExtension
             SecretAccessKey = section.GetValue<string?>(SecretAccessKeyOption.Name),
             CredentialProfile = section.GetValue<string?>(CredentialProfileOption.Name),
             CredentialFile = section.GetValue<string?>(CredentialFileOption.Name),
+            Region = section.GetValue<string?>(RegionOption.Name),
         };
 
         if (route53Config.CredentialProfile is not null &&

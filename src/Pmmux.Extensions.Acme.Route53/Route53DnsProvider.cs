@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Amazon;
 using Amazon.Route53;
 using Amazon.Route53.Model;
 using Amazon.Runtime;
@@ -171,9 +172,12 @@ internal sealed class Route53DnsProvider(Route53Config config, ILoggerFactory lo
         var profile = route53Config.CredentialProfile;
         var credentialFile = route53Config.CredentialFile;
 
+        var region = RegionEndpoint.GetBySystemName(route53Config.Region);
+        var clientConfig = new AmazonRoute53Config { RegionEndpoint = region };
+
         if (!string.IsNullOrEmpty(accessKeyId) || !string.IsNullOrEmpty(secretAccessKey))
         {
-            return new AmazonRoute53Client(new BasicAWSCredentials(accessKeyId, secretAccessKey));
+            return new AmazonRoute53Client(new BasicAWSCredentials(accessKeyId, secretAccessKey), clientConfig);
         }
 
         if (!string.IsNullOrEmpty(profile) || !string.IsNullOrEmpty(credentialFile))
@@ -183,9 +187,9 @@ internal sealed class Route53DnsProvider(Route53Config config, ILoggerFactory lo
             {
                 throw new InvalidOperationException($"AWS credential profile '{profile ?? "default"}' not found");
             }
-            return new AmazonRoute53Client(credentials);
+            return new(credentials, clientConfig);
         }
 
-        return new AmazonRoute53Client();
+        return new(clientConfig);
     }
 }

@@ -6,4 +6,5 @@ internal record Route53Config
     public string? SecretAccessKey { get; init; }
     public string? CredentialProfile { get; init; }
     public string? CredentialFile { get; init; }
+    public string? Region { get; init; }
 }

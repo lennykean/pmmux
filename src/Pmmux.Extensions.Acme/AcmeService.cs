@@ -246,7 +246,7 @@ internal sealed class AcmeService(
             }
 
             _workerCts = new CancellationTokenSource();
-            _renewalLoopTask = Task.Run(() => RenewalLoopAsync(_workerCts.Token));
+            _renewalLoopTask = RenewalLoopAsync(_workerCts.Token);
 
             _state.TryTransition(to: State.Started, from: State.Starting);
             _logger.LogInformation("acme service started");
@@ -267,15 +267,11 @@ internal sealed class AcmeService(
 
         _logger.LogInformation("stopping acme service");
 
-        if (_workerCts is not null)
-        {
-            await _workerCts.CancelAsync().ConfigureAwait(false);
-        }
+        _workerCts?.Cancel();
 
         if (_renewalLoopTask is not null)
         {
-            await Task.WhenAny(_renewalLoopTask, Task.Delay(TimeSpan.FromSeconds(10), cancellationToken))
-                .ConfigureAwait(false);
+            await _renewalLoopTask.ConfigureAwait(false);
         }
     }
 
@@ -301,28 +297,27 @@ internal sealed class AcmeService(
 
     private async Task RenewalLoopAsync(CancellationToken cancellationToken)
     {
-        try
+        while (!cancellationToken.IsCancellationRequested)
         {
-            while (!cancellationToken.IsCancellationRequested)
+            try
             {
-                try
-                {
-                    await ProcessAllCertificatesAsync(cancellationToken).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "unexpected error in renewal cycle");
-                }
+                await ProcessAllCertificatesAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "unexpected error in renewal cycle");
+            }
 
+            try
+            {
                 await Task.Delay(RenewalCheckInterval, cancellationToken).ConfigureAwait(false);
             }
-        }
-        catch (OperationCanceledException)
-        {
+            catch (OperationCanceledException)
+            {
+            }
         }
     }
 
