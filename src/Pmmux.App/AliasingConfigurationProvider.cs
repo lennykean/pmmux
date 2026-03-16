@@ -45,7 +45,7 @@ internal class AliasingConfigurationProvider(
         {
             var aliasPath = string.Join<string>(ConfigurationPath.KeyDelimiter, [root, alias, .. rest]);
 
-            childKeys = innerProvider.GetChildKeys(earlierKeysMaterialized, aliasPath).ToArray();
+            childKeys = [.. innerProvider.GetChildKeys(earlierKeysMaterialized, aliasPath)];
 
             if (childKeys.Length > earlierKeysMaterialized.Length)
             {

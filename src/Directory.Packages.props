@@ -10,6 +10,10 @@
     <PackageVersion Include="Alexinea.Extensions.Configuration.Toml" Version="[7.0.0,8)" />
     <PackageVersion Include="Alexinea.Extensions.Configuration.Yaml" Version="[7.0.0,8)" />
     <PackageVersion Include="Certes" Version="[3.0.4,4)" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.4">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageVersion>
     <PackageVersion Include="DefaultDocumentation" Version="[1.2.2,1.3)" />
     <PackageVersion Include="ILRepack.Lib.MSBuild.Task" Version="[2.0.44,3)" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="[10,11)" />
@@ -26,10 +30,19 @@
     <PackageVersion Include="Microsoft.Extensions.Hosting.Systemd" Version="[9,11)" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.WindowsServices" Version="[9,11)" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="[9,11)" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="[9,11]" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="[17.12,18)" />
     <PackageVersion Include="Mono.Nat" Version="[3.0.4,4)" />
     <PackageVersion Include="NetEscapades.Extensions.Logging.RollingFile" Version="[2.5,3)" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="[1.4.0,2)" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="[1.4.0,2)" />
+    <PackageVersion Include="Moq" Version="[4.20.72,5)" />
+    <PackageVersion Include="NUnit" Version="[4.4.0,5)" />
+    <PackageVersion Include="NUnit.Analyzers" Version="[4.11.2,5)">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageVersion>
+    <PackageVersion Include="NUnit3TestAdapter" Version="[4.6,5)" />
     <PackageVersion Include="System.CommandLine" Version="[2,3)" />
     <PackageVersion Include="System.IO.FileSystem.AccessControl" Version="[5.0.0,6)" />
     <PackageVersion Include="System.IO.Pipelines" Version="[9,11)" />
@@ -37,8 +50,5 @@
     <PackageVersion Include="System.Threading.Channels" Version="[9,11)" />
     <PackageVersion Include="TopShelf.ServiceInstaller" Version="[4.3,5)" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="[2.3,3)" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="[17.12,18)" />
-    <PackageVersion Include="NUnit" Version="[3.14,4)" />
-    <PackageVersion Include="NUnit3TestAdapter" Version="[4.6,5)" />
   </ItemGroup>
 </Project>

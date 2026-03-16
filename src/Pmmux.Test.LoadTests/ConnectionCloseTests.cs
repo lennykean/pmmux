@@ -14,6 +14,7 @@ using NUnit.Framework;
 using Pmmux.Abstractions;
 using Pmmux.Core;
 using Pmmux.Core.Configuration;
+using Pmmux.Test.Shared;
 
 namespace Pmmux.Test.LoadTests;
 

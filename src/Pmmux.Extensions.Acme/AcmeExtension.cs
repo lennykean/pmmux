@@ -143,7 +143,7 @@ public sealed class AcmeExtension : IExtension
         }
 
         domains.Insert(0, primaryDomain);
-        domains = domains.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        domains = [.. domains.Distinct(StringComparer.OrdinalIgnoreCase)];
 
         foreach (var domain in domains)
         {

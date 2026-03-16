@@ -41,53 +41,54 @@ internal static class ConfigurationLoader
         var configFile = parseResult.GetValue(ConfigurationFileOption) ?? "pmmux.toml";
 
         builder.Sources.Clear();
-        builder.Sources.Add(AliasingConfigurationProvider.Wrap(
-            new CommandlineOptionDefaultConfigurationProvider.Source(
-                options,
-                ROOT_KEY,
-                provideDefaultKeys: false,
-                provideDefaultValues: true),
-            aliasMap,
-            rootKey: ROOT_KEY));
+        builder.Sources.Add(EnvExpansionConfigurationProvider.Wrap(
+            AliasingConfigurationProvider.Wrap(
+                new CommandlineOptionDefaultConfigurationProvider.Source(
+                    options,
+                    ROOT_KEY,
+                    provideDefaultKeys: false,
+                    provideDefaultValues: true),
+                aliasMap,
+                rootKey: ROOT_KEY)));
 
         switch (Path.GetExtension(configFile))
         {
             case ".json":
-                builder.Sources.Add(AliasingConfigurationProvider.Wrap(
+                builder.Sources.Add(EnvExpansionConfigurationProvider.Wrap(AliasingConfigurationProvider.Wrap(
                     new JsonConfigurationSource() { Path = configFile, Optional = true, FileProvider = fileProvider },
                     aliasMap,
-                    rootKey: ROOT_KEY));
+                    rootKey: ROOT_KEY)));
                 break;
             case ".yaml" or ".yml":
-                builder.Sources.Add(AliasingConfigurationProvider.Wrap(
+                builder.Sources.Add(EnvExpansionConfigurationProvider.Wrap(AliasingConfigurationProvider.Wrap(
                     new YamlConfigurationSource() { Path = configFile, Optional = true, FileProvider = fileProvider },
                     aliasMap,
-                    rootKey: ROOT_KEY));
+                    rootKey: ROOT_KEY)));
                 break;
             case ".toml":
-                builder.Sources.Add(AliasingConfigurationProvider.Wrap(
+                builder.Sources.Add(EnvExpansionConfigurationProvider.Wrap(AliasingConfigurationProvider.Wrap(
                     new TomlConfigurationSource() { Path = configFile, Optional = true, FileProvider = fileProvider },
                     aliasMap,
-                    rootKey: ROOT_KEY));
+                    rootKey: ROOT_KEY)));
                 break;
         }
 
-        builder.Sources.Add(AliasingConfigurationProvider.Wrap(
+        builder.Sources.Add(EnvExpansionConfigurationProvider.Wrap(AliasingConfigurationProvider.Wrap(
             new EnvironmentVariablesConfigurationSource(),
             aliasMap,
-            rootKey: ROOT_KEY));
-        builder.Sources.Add(AliasingConfigurationProvider.Wrap(
+            rootKey: ROOT_KEY)));
+        builder.Sources.Add(EnvExpansionConfigurationProvider.Wrap(AliasingConfigurationProvider.Wrap(
             new CommandlineParserConfigurationProvider.Source(parseResult, options, ROOT_KEY),
             aliasMap,
-            rootKey: ROOT_KEY));
-        builder.Sources.Add(AliasingConfigurationProvider.Wrap(
+            rootKey: ROOT_KEY)));
+        builder.Sources.Add(EnvExpansionConfigurationProvider.Wrap(AliasingConfigurationProvider.Wrap(
             new CommandlineOptionDefaultConfigurationProvider.Source(
                 options,
                 ROOT_KEY,
                 provideDefaultKeys: true,
                 provideDefaultValues: false),
             aliasMap,
-            rootKey: ROOT_KEY));
+            rootKey: ROOT_KEY)));
 
         return builder;
     }

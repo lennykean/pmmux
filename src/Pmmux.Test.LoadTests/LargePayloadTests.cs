@@ -13,6 +13,7 @@ using NUnit.Framework;
 using Pmmux.Abstractions;
 using Pmmux.Core;
 using Pmmux.Core.Configuration;
+using Pmmux.Test.Shared;
 
 namespace Pmmux.Test.LoadTests;
 
@@ -41,7 +42,7 @@ public class LargePayloadTests
     }
 
     [Test, TestCaseSource(nameof(LargeResponseScenarios))]
-    [Timeout(300_000)]
+    [CancelAfter(300_000)]
     public async Task LargeResponse_NoErrors(long responseSize, int concurrency)
     {
         using var serverCts = new CancellationTokenSource();
@@ -119,7 +120,7 @@ public class LargePayloadTests
     }
 
     [Test, TestCaseSource(nameof(BidirectionalScenarios))]
-    [Timeout(300_000)]
+    [CancelAfter(300_000)]
     public async Task Bidirectional_NoErrors(long payloadSize, int concurrency)
     {
         using var serverCts = new CancellationTokenSource();
@@ -197,7 +198,7 @@ public class LargePayloadTests
     }
 
     [Test, TestCaseSource(nameof(MidTransferCloseScenarios))]
-    [Timeout(300_000)]
+    [CancelAfter(300_000)]
     public async Task ClientCloseMidTransfer_NoErrors(long responseSize, long closeAfterBytes, int concurrency)
     {
         using var serverCts = new CancellationTokenSource();
@@ -267,7 +268,7 @@ public class LargePayloadTests
     }
 
     [Test]
-    [Timeout(300_000)]
+    [CancelAfter(300_000)]
     public async Task SlowConsumer_NoErrors()
     {
         var responseSize = 2L * 1024 * 1024 * 1024;
@@ -340,7 +341,7 @@ public class LargePayloadTests
     }
 
     [Test, TestCaseSource(nameof(FlakyServerScenarios))]
-    [Timeout(300_000)]
+    [CancelAfter(300_000)]
     public async Task FlakyServer_NoErrors(long responseSize, int concurrency)
     {
         var jitter = new Jitter(MaxPauseMs: 50, MinChunkSize: 1024, MaxChunkSize: ChunkSize);

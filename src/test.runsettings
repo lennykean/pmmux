@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <TestRunParameters>
+    <Parameter name="test-logger" value="True" />
+    <Parameter name="test-logger-writer" value="Console" />
+  </TestRunParameters>
+  <RunConfiguration>
+    <TestCaseFilter>TestCategory!=LoadTest</TestCaseFilter>
+  </RunConfiguration>
+</RunSettings>

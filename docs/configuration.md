@@ -491,3 +491,25 @@ export PMMUX__BACKENDS__1="api:pass:target.ip=127.0.0.1,target.port=4000"
 export PMMUX__PORT_BINDINGS__0="8080:8080:tcp"
 ```
 
+### Environment Variable References in Configuration Values
+
+Configuration values from any source (config files, CLI arguments, environment variables) can reference environment variables using the `{{env:NAME}}` template syntax.
+
+This is useful for keeping secrets and environment-specific values out of configuration files.
+
+```toml
+[pmmux]
+tls-certificate = [
+  "default:path=/certs/server.pfx,type=pfx,password={{env:TLS_CERT_PASSWORD}}",
+]
+
+backends = [
+  "db:pass:target.ip={{env:DB_HOST}},target.port={{env:DB_PORT}}",
+]
+```
+
+Multiple references can appear in a single value:
+
+```sh
+-b "db:pass:target.ip={{env:DB_HOST}},target.port={{env:DB_PORT}}"
+```

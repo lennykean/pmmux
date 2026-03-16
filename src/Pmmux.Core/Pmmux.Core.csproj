@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Pmmux.Test.Core" />
     <InternalsVisibleTo Include="Pmmux.Test.LoadTests" />
   </ItemGroup>
 

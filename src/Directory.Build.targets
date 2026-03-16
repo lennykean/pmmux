@@ -15,6 +15,5 @@
 
   <PropertyGroup Condition="'$(IsTestProject)' == 'true'">
     <RunSettingsFilePath>$(MSBuildThisFileDirectory)test.runsettings</RunSettingsFilePath>
-    <VSTestTestCaseFilter>TestCategory!=LoadTest</VSTestTestCaseFilter>
   </PropertyGroup>
 </Project>
