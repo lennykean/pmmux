@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using NetEscapades.Extensions.Logging.RollingFile.Formatters;
 
 using Pmmux.Abstractions;
-using Pmmux.Core;
 
 namespace Pmmux.App;
 

@@ -12,4 +12,9 @@
     <DefaultDocumentationLinksOutputFile>..\..\doc-links\$(MSBuildProjectName).links</DefaultDocumentationLinksOutputFile>
     <DefaultDocumentationExternLinksFiles>@(ExternLinks, '|')</DefaultDocumentationExternLinksFiles>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsTestProject)' == 'true'">
+    <RunSettingsFilePath>$(MSBuildThisFileDirectory)test.runsettings</RunSettingsFilePath>
+    <VSTestTestCaseFilter>TestCategory!=LoadTest</VSTestTestCaseFilter>
+  </PropertyGroup>
 </Project>

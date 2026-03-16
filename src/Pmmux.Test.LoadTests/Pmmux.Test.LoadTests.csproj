@@ -6,6 +6,7 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <VSTestTestCaseFilter />
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,5 +19,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Pmmux.Core\Pmmux.Core.csproj" />
+    <ProjectReference Include="..\Pmmux.Test.Core\Pmmux.Test.Core.csproj" />
   </ItemGroup>
 </Project>
