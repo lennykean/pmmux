@@ -18,6 +18,7 @@ using Pmmux.Core.Configuration;
 namespace Pmmux.Test.LoadTests;
 
 [TestFixture]
+[Category("LoadTest")]
 public class ConnectionCloseTests
 {
     public readonly record struct Wave(int Connections, int DelayAfterMs);
@@ -54,7 +55,7 @@ public class ConnectionCloseTests
         var serverPort = ((IPEndPoint)serverListener.LocalEndpoint).Port;
         var serverTask = RunRespondAndCloseServerAsync(serverListener, responsePayload, serverCts.Token);
 
-        using var loggerFactory = LoggerFactory.Create(b => { });
+        using var loggerFactory = LoggerFactory.Create(b => b.AddTestLogger());
 
         var metricReporter = new MetricReporter([], loggerFactory);
         var eventBroker = new EventBroker();

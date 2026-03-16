@@ -17,6 +17,7 @@ using Pmmux.Core.Configuration;
 namespace Pmmux.Test.LoadTests;
 
 [TestFixture]
+[Category("LoadTest")]
 public class LargePayloadTests
 {
     private sealed record Counters
@@ -50,7 +51,7 @@ public class LargePayloadTests
         var serverPort = ((IPEndPoint)serverListener.LocalEndpoint).Port;
         var serverTask = RunStreamingServerAsync(serverListener, responseSize, serverCts.Token);
 
-        using var loggerFactory = LoggerFactory.Create(b => { });
+        using var loggerFactory = LoggerFactory.Create(b => b.AddTestLogger());
         var metricReporter = new MetricReporter([], loggerFactory);
         var eventBroker = new EventBroker();
 
@@ -128,7 +129,7 @@ public class LargePayloadTests
         var serverPort = ((IPEndPoint)serverListener.LocalEndpoint).Port;
         var serverTask = RunBidirectionalServerAsync(serverListener, payloadSize, serverCts.Token);
 
-        using var loggerFactory = LoggerFactory.Create(b => { });
+        using var loggerFactory = LoggerFactory.Create(b => b.AddTestLogger());
         var metricReporter = new MetricReporter([], loggerFactory);
         var eventBroker = new EventBroker();
 
@@ -206,7 +207,7 @@ public class LargePayloadTests
         var serverPort = ((IPEndPoint)serverListener.LocalEndpoint).Port;
         var serverTask = RunStreamingServerAsync(serverListener, responseSize, serverCts.Token);
 
-        using var loggerFactory = LoggerFactory.Create(b => { });
+        using var loggerFactory = LoggerFactory.Create(b => b.AddTestLogger());
         var metricReporter = new MetricReporter([], loggerFactory);
         var eventBroker = new EventBroker();
 
@@ -278,7 +279,7 @@ public class LargePayloadTests
         var serverPort = ((IPEndPoint)serverListener.LocalEndpoint).Port;
         var serverTask = RunStreamingServerAsync(serverListener, responseSize, serverCts.Token);
 
-        using var loggerFactory = LoggerFactory.Create(b => { });
+        using var loggerFactory = LoggerFactory.Create(b => b.AddTestLogger());
         var metricReporter = new MetricReporter([], loggerFactory);
         var eventBroker = new EventBroker();
 
@@ -351,7 +352,7 @@ public class LargePayloadTests
         var serverPort = ((IPEndPoint)serverListener.LocalEndpoint).Port;
         var serverTask = RunStreamingServerAsync(serverListener, responseSize, serverCts.Token, jitter);
 
-        using var loggerFactory = LoggerFactory.Create(b => { });
+        using var loggerFactory = LoggerFactory.Create(b => b.AddTestLogger());
         var metricReporter = new MetricReporter([], loggerFactory);
         var eventBroker = new EventBroker();
 
