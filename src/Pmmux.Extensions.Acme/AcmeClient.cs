@@ -68,10 +68,19 @@ internal sealed class AcmeClient(
                 var accountKey = KeyFactory.FromPem(existingAccount.AccountKeyPem);
                 _acmeContext = new AcmeContext(serverUri, accountKey);
 
-                await _acmeContext.Account().ConfigureAwait(false);
-                _logger.LogDebug("loaded acme account {AccountUri}", existingAccount.AccountUri);
+                try
+                {
+                    await _acmeContext.Account().ConfigureAwait(false);
+                    _logger.LogDebug("loaded acme account {AccountUri}", existingAccount.AccountUri);
+                }
+                catch (AcmeRequestException)
+                {
+                    _logger.LogWarning("saved acme account no longer exists, re-registering");
+                    _acmeContext = null;
+                }
             }
-            else
+
+            if (_acmeContext is null)
             {
                 _acmeContext = new AcmeContext(serverUri);
 
@@ -283,6 +292,7 @@ internal sealed class AcmeClient(
         return challengeType switch
         {
             "dns-01" => await authContext.Dns().ConfigureAwait(false),
+            "http-01" => await authContext.Http().ConfigureAwait(false),
             _ => throw new ArgumentException($"unsupported challenge type: {challengeType}")
         };
     }

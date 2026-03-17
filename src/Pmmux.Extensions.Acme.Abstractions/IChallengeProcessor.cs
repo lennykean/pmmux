@@ -18,6 +18,21 @@ public interface IChallengeProcessor
     string ChallengeType { get; }
 
     /// <summary>
+    /// Initialize batch processing for this challenge type.
+    /// </summary>
+    /// <remarks>
+    /// Called once before processing a batch of certificates that use this challenge type.
+    /// </remarks>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>
+    /// A handle that cleans up batch resources when disposed.
+    /// </returns>
+    Task<IAsyncDisposable> InitializeBatchAsync(CancellationToken cancellationToken)
+    {
+        return Task.FromResult<IAsyncDisposable>(NoopDisposable.Instance);
+    }
+
+    /// <summary>
     /// Prepare challenge responses for the specified challenge.
     /// </summary>
     /// <param name="authorizations">The authorizations and their selected challenge contexts.</param>

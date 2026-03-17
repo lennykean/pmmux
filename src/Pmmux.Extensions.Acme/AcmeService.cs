@@ -324,6 +324,8 @@ internal sealed class AcmeService(
     {
         var stateData = stateStore.GetStateData();
 
+        var pending = new List<AcmeManagedCertificate>();
+
         foreach (var cert in stateData.Certificates.Values.ToList())
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -362,8 +364,47 @@ internal sealed class AcmeService(
                 await stateStore.SaveStateDataAsync(stateData, cancellationToken).ConfigureAwait(false);
             }
 
-            await ProvisionCertificateAsync(cert, cancellationToken).ConfigureAwait(false);
-            await stateStore.SaveStateDataAsync(stateData, cancellationToken).ConfigureAwait(false);
+            pending.Add(cert);
+        }
+
+        var groups = pending
+            .GroupBy(c => c.ChallengeType, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        foreach (var group in groups)
+        {
+            var processor = challengeProcessors.FirstOrDefault(p =>
+                string.Equals(p.ChallengeType, group.Key, StringComparison.OrdinalIgnoreCase));
+
+            IAsyncDisposable? batchHandle = null;
+
+            try
+            {
+                if (processor is not null)
+                {
+                    batchHandle = await processor.InitializeBatchAsync(cancellationToken).ConfigureAwait(false);
+                }
+
+                foreach (var cert in group)
+                {
+                    await ProvisionCertificateAsync(cert, cancellationToken).ConfigureAwait(false);
+                    await stateStore.SaveStateDataAsync(stateData, cancellationToken).ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                if (batchHandle is not null)
+                {
+                    try
+                    {
+                        await batchHandle.DisposeAsync().ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "failed to clean up batch resources for {ChallengeType}", group.Key);
+                    }
+                }
+            }
         }
     }
 

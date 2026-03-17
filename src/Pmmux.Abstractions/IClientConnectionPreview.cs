@@ -34,7 +34,7 @@ public interface IClientConnectionPreview : IAsyncDisposable
     /// </summary>
     /// <remarks>
     /// Use <see cref="PipeReader.ReadAsync"/> to examine buffered data, then call
-    /// <see cref="PipeReader.AdvanceTo(System.SequencePosition, System.SequencePosition)"/>
+    /// <see cref="PipeReader.AdvanceTo(SequencePosition, SequencePosition)"/>
     /// with the start position to avoid consuming the data. Configuration may limit buffered data.
     /// </remarks>
     PipeReader Ingress { get; }

@@ -72,5 +72,5 @@ Different certificates can use different hosted zones:
 
 ## See Also
 
-- [ACME Extension](../Pmmux.Extensions.Acme/README.md) -- Certificate lifecycle and configuration
-- [ACME Abstractions](../Pmmux.Extensions.Acme.Abstractions/README.md) -- Implementing custom DNS providers
+- [ACME Extension](../Pmmux.Extensions.Acme/README.md): Certificate lifecycle and configuration
+- [ACME Abstractions](../Pmmux.Extensions.Acme.Abstractions/README.md): Implementing custom DNS providers

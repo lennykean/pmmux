@@ -107,6 +107,11 @@ public sealed class AcmeExtension : IExtension
         services.AddSingleton<AcmeClient>();
         services.AddSingleton<IChallengeProcessor, DnsChallengeProcessor>();
 
+        var httpChallengeProtocol = new HttpChallengeBackend.Protocol();
+        services.AddSingleton(httpChallengeProtocol);
+        services.AddSingleton<IBackendProtocol>(httpChallengeProtocol);
+        services.AddSingleton<IChallengeProcessor, HttpChallengeProcessor>();
+
         services.AddSingleton<AcmeService>();
         services.AddHostedService(sp => sp.GetRequiredService<AcmeService>());
     }

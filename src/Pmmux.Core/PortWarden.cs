@@ -62,43 +62,40 @@ public sealed class PortWarden(
 
         try
         {
-            if (config.PortMaps.Any())
+            var gateways = NetworkUtility.GetGateways(config.GatewayAddress, config.NetworkInterface);
+
+            _logger.LogTrace("searching [{Gateways}] for [{NatProtocols}] NAT devices",
+                string.Join(",", gateways.Select(g => g.ToString())),
+                string.Join(",", config.NatProtocol is null
+                     ? [NatProtocol.Upnp, NatProtocol.Pmp]
+                     : [config.NatProtocol.Value]));
+
+            _natDevice = await NetworkUtility.FindNatDeviceAsync(gateways, config.NatProtocol, linkedCts.Token)
+                .WithTimeout(timeoutCts.Token)
+                .ConfigureAwait(false);
+
+            var natDeviceInfo = _natDevice.DeviceInfo();
+
+            _logger.LogDebug(
+                "{NatProtocol} device found at {NatEndpoint} with public address {NatDeviceAddress}",
+                natDeviceInfo.NatProtocol,
+                natDeviceInfo.Endpoint,
+                natDeviceInfo.PublicAddress);
+
+            foreach (var portMapConfig in config.PortMaps)
             {
-                var gateways = NetworkUtility.GetGateways(config.GatewayAddress, config.NetworkInterface);
+                var portMap = await AddPortMapInternalAsync(
+                    portMapConfig.NetworkProtocol,
+                    portMapConfig.LocalPort,
+                    portMapConfig.PublicPort,
+                    portMapConfig.Index,
+                    linkedCts.Token).WithTimeout(timeoutCts.Token).ConfigureAwait(false);
 
-                _logger.LogTrace("searching [{Gateways}] for [{NatProtocols}] NAT devices",
-                    string.Join(",", gateways.Select(g => g.ToString())),
-                    string.Join(",", config.NatProtocol is null
-                         ? [NatProtocol.Upnp, NatProtocol.Pmp]
-                         : [config.NatProtocol.Value]));
-
-                _natDevice = await NetworkUtility.FindNatDeviceAsync(gateways, config.NatProtocol, linkedCts.Token)
-                    .WithTimeout(timeoutCts.Token)
-                    .ConfigureAwait(false);
-
-                var natDeviceInfo = _natDevice.DeviceInfo();
-
-                _logger.LogDebug(
-                    "{NatProtocol} device found at {NatEndpoint} with public address {NatDeviceAddress}",
-                    natDeviceInfo.NatProtocol,
-                    natDeviceInfo.Endpoint,
-                    natDeviceInfo.PublicAddress);
-
-                foreach (var portMapConfig in config.PortMaps)
-                {
-                    var portMap = await AddPortMapInternalAsync(
-                        portMapConfig.NetworkProtocol,
-                        portMapConfig.LocalPort,
-                        portMapConfig.PublicPort,
-                        portMapConfig.Index,
-                        linkedCts.Token).WithTimeout(timeoutCts.Token).ConfigureAwait(false);
-
-                    _logger.LogInformation(
-                        "{NetworkProtocol} port map created {PublicEndpoint}>{LocalPort}",
-                        portMap?.NetworkProtocol,
-                        portMap?.PublicEndpoint,
-                        portMap?.LocalPort);
-                }
+                _logger.LogInformation(
+                    "{NetworkProtocol} port map created {PublicEndpoint}>{LocalPort}",
+                    portMap?.NetworkProtocol,
+                    portMap?.PublicEndpoint,
+                    portMap?.LocalPort);
             }
             _state.TryTransition(to: State.Started, from: State.Starting);
         }

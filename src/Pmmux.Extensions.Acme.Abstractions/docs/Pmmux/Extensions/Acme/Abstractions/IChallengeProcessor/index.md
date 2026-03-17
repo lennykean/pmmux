@@ -15,4 +15,5 @@ public interface IChallengeProcessor
 
 | Methods | |
 | :--- | :--- |
+| [InitializeBatchAsync\(CancellationToken\)](InitializeBatchAsync(CancellationToken).md 'Pmmux\.Extensions\.Acme\.Abstractions\.IChallengeProcessor\.InitializeBatchAsync\(System\.Threading\.CancellationToken\)') | Initialize batch processing for this challenge type\. |
 | [PrepareAsync\(IEnumerable&lt;AuthorizationInfo&gt;, IKey, string, IReadOnlyDictionary&lt;string,string&gt;, CancellationToken\)](PrepareAsync(IEnumerable_AuthorizationInfo_,IKey,string,IReadOnlyDictionary_string,string_,CancellationToken).md 'Pmmux\.Extensions\.Acme\.Abstractions\.IChallengeProcessor\.PrepareAsync\(System\.Collections\.Generic\.IEnumerable\<Pmmux\.Extensions\.Acme\.Abstractions\.AuthorizationInfo\>, Certes\.IKey, string, System\.Collections\.Generic\.IReadOnlyDictionary\<string,string\>, System\.Threading\.CancellationToken\)') | Prepare challenge responses for the specified challenge\. |
