@@ -13,6 +13,22 @@ Multiple applications and protocols are multiplexed through the same network por
 - **Observability** - Built-in instrumentation
 - **Extensibility** - Custom routing, protocol handling, metric exporters, and more via plugins
 
+## Installation
+
+**Linux / macOS:**
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/lennykean/pmmux/main/scripts/install.sh | sh
+```
+
+**Windows (PowerShell):**
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/lennykean/pmmux/main/scripts/install.ps1)))
+```
+
+Extensions can be installed separately. See the [Standard Extensions](#standard-extensions) section for available extensions and installation instructions.
+
 ## Quick Start
 
 Route traffic from port 8080 to a backend web server:

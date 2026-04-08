@@ -59,6 +59,7 @@ internal static class Program
             rootCommand.TreatUnmatchedTokensAsErrors = true;
             rootCommand.Add(new InstallCommand());
             rootCommand.Add(new UninstallCommand());
+            rootCommand.Add(new VersionCommand(extensions));
 
             foreach (var extension in extensions)
             {

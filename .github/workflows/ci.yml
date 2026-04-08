@@ -1,0 +1,217 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - run: dotnet restore src/Pmmux.sln
+      - run: dotnet build src/Pmmux.sln -c Release --no-restore
+      - run: dotnet test src/Pmmux.sln -c Release --no-build --settings src/test.runsettings
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rid: [linux-x64, linux-arm64, win-x64, osx-x64, osx-arm64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Set version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=0.0.0-dev" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish
+        run: >
+          dotnet publish src/Pmmux.App/Pmmux.App.csproj
+          -c Release
+          -r ${{ matrix.rid }}
+          /p:Version=${{ steps.version.outputs.version }}
+
+      - name: Package
+        run: >
+          tar -czf pmmux-${{ matrix.rid }}.tar.gz
+          -C src/Pmmux.App/bin/Release/net10.0/${{ matrix.rid }}/publish .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pmmux-${{ matrix.rid }}
+          path: pmmux-${{ matrix.rid }}.tar.gz
+
+  build-extensions:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Set version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=0.0.0-dev" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish http
+        run: >
+          dotnet publish src/Pmmux.Extensions.Http/Pmmux.Extensions.Http.csproj
+          -c Release /p:Version=${{ steps.version.outputs.version }}
+
+      - name: Package http
+        run: >
+          tar -czf pmmux-extension-http.tar.gz
+          -C src/Pmmux.Extensions.Http/bin/Release/net10.0/publish
+          Pmmux.Extensions.Http.dll
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pmmux-extension-http
+          path: pmmux-extension-http.tar.gz
+
+      - name: Publish tls
+        run: >
+          dotnet publish src/Pmmux.Extensions.Tls/Pmmux.Extensions.Tls.csproj
+          -c Release /p:Version=${{ steps.version.outputs.version }}
+
+      - name: Package tls
+        run: >
+          tar -czf pmmux-extension-tls.tar.gz
+          -C src/Pmmux.Extensions.Tls/bin/Release/net10.0/publish
+          Pmmux.Extensions.Tls.dll
+          Pmmux.Extensions.Tls.Abstractions.dll
+          Pmmux.Extensions.Management.Abstractions.dll
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pmmux-extension-tls
+          path: pmmux-extension-tls.tar.gz
+
+      - name: Publish bittorrent
+        run: >
+          dotnet publish src/Pmmux.Extensions.BitTorrent/Pmmux.Extensions.BitTorrent.csproj
+          -c Release /p:Version=${{ steps.version.outputs.version }}
+
+      - name: Package bittorrent
+        run: >
+          tar -czf pmmux-extension-bittorrent.tar.gz
+          -C src/Pmmux.Extensions.BitTorrent/bin/Release/net10.0/publish
+          Pmmux.Extensions.BitTorrent.dll
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pmmux-extension-bittorrent
+          path: pmmux-extension-bittorrent.tar.gz
+
+      - name: Publish management
+        run: >
+          dotnet publish src/Pmmux.Extensions.Management/Pmmux.Extensions.Management.csproj
+          -c Release /p:Version=${{ steps.version.outputs.version }}
+
+      - name: Package management
+        run: >
+          tar -czf pmmux-extension-management.tar.gz
+          -C src/Pmmux.Extensions.Management/bin/Release/net10.0/publish
+          Pmmux.Extensions.Management.dll
+          Pmmux.Extensions.Management.Abstractions.dll
+          Pmmux.Extensions.Management.Models.dll
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pmmux-extension-management
+          path: pmmux-extension-management.tar.gz
+
+      - name: Publish acme
+        run: >
+          dotnet publish src/Pmmux.Extensions.Acme/Pmmux.Extensions.Acme.csproj
+          -c Release /p:Version=${{ steps.version.outputs.version }}
+
+      - name: Package acme
+        run: >
+          tar -czf pmmux-extension-acme.tar.gz
+          -C src/Pmmux.Extensions.Acme/bin/Release/net10.0/publish
+          Pmmux.Extensions.Acme.dll
+          Pmmux.Extensions.Acme.Abstractions.dll
+          Pmmux.Extensions.Tls.Abstractions.dll
+          Certes.dll
+          Newtonsoft.Json.dll
+          BouncyCastle.Cryptography.dll
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pmmux-extension-acme
+          path: pmmux-extension-acme.tar.gz
+
+      - name: Publish acme-route53
+        run: >
+          dotnet publish src/Pmmux.Extensions.Acme.Route53/Pmmux.Extensions.Acme.Route53.csproj
+          -c Release /p:Version=${{ steps.version.outputs.version }}
+
+      - name: Package acme-route53
+        run: >
+          tar -czf pmmux-extension-acme-route53.tar.gz
+          -C src/Pmmux.Extensions.Acme.Route53/bin/Release/net10.0/publish
+          Pmmux.Extensions.Acme.Route53.dll
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pmmux-extension-acme-route53
+          path: pmmux-extension-acme-route53.tar.gz
+
+      - name: Publish otlp
+        run: >
+          dotnet publish src/Pmmux.Extensions.Otlp/Pmmux.Extensions.Otlp.csproj
+          -c Release /p:Version=${{ steps.version.outputs.version }}
+
+      - name: Package otlp
+        run: >
+          tar -czf pmmux-extension-otlp.tar.gz
+          -C src/Pmmux.Extensions.Otlp/bin/Release/net10.0/publish
+          Pmmux.Extensions.Otlp.dll
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pmmux-extension-otlp
+          path: pmmux-extension-otlp.tar.gz
+
+  release:
+    needs: [build, build-extensions]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: '*.tar.gz'
+          prerelease: ${{ contains(github.ref_name, '-') }}

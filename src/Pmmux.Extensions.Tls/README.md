@@ -12,7 +12,19 @@ The TLS extension provides TLS/SSL termination and SNI-based routing for pmmux.
 
 ## Installation
 
-The following example adds the TLS extension to the configuration:
+**Linux / macOS:**
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/lennykean/pmmux/main/scripts/install-extension.sh | sh -s tls
+```
+
+**Windows (PowerShell):**
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/lennykean/pmmux/main/scripts/install-extension.ps1))) tls
+```
+
+Once installed, the extension is loaded via the `-x` flag or configuration file:
 
 ```sh
 pmmux --tls-enable -x Pmmux.Extensions.Tls.dll ...

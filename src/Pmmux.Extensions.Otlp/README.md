@@ -2,9 +2,23 @@
 
 The OTLP extension enables OpenTelemetry metrics export for observability.
 
+## Installation
+
+**Linux / macOS:**
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/lennykean/pmmux/main/scripts/install-extension.sh | sh -s otlp
+```
+
+**Windows (PowerShell):**
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/lennykean/pmmux/main/scripts/install-extension.ps1))) otlp
+```
+
 ## Quickstart
 
-The following example adds the OTLP extension to the configuration:
+Once installed, the extension is loaded via the `-x` flag or configuration file:
 
 ```sh
 pmmux --otlp-enable -x Pmmux.Extensions.Otlp.dll ...

@@ -4,6 +4,18 @@ The Route 53 extension allows the [ACME extension](../Pmmux.Extensions.Acme/READ
 
 ## Installation
 
+**Linux / macOS:**
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/lennykean/pmmux/main/scripts/install-extension.sh | sh -s acme-route53
+```
+
+**Windows (PowerShell):**
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/lennykean/pmmux/main/scripts/install-extension.ps1))) acme-route53
+```
+
 Load the Route 53 extension alongside the [ACME extension](../Pmmux.Extensions.Acme/README.md) and the [TLS extension](../Pmmux.Extensions.Tls/README.md):
 
 ```sh

@@ -13,7 +13,19 @@ The Management extension provides a REST API for runtime management of pmmux, in
 
 ## Installation
 
-The following example adds the Management extension to the configuration:
+**Linux / macOS:**
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/lennykean/pmmux/main/scripts/install-extension.sh | sh -s management
+```
+
+**Windows (PowerShell):**
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/lennykean/pmmux/main/scripts/install-extension.ps1))) management
+```
+
+Once installed, the extension is loaded via the `-x` flag or configuration file:
 
 ```sh
 pmmux --management-enable -x Pmmux.Extensions.Management.dll ...

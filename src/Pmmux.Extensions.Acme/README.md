@@ -4,6 +4,20 @@ The ACME extension automates TLS certificate provisioning and renewal via Let's 
 
 ## Installation
 
+**Linux / macOS:**
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/lennykean/pmmux/main/scripts/install-extension.sh | sh -s acme
+```
+
+**Windows (PowerShell):**
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/lennykean/pmmux/main/scripts/install-extension.ps1))) acme
+```
+
+Once installed, the extension is loaded via the `-x` flag or configuration file:
+
 ```sh
 pmmux \
   -x Pmmux.Extensions.Tls.dll \
