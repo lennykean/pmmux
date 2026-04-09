@@ -24,8 +24,6 @@ usage() {
     exit 1
 }
 
-# -- tool detection --
-
 check_tools() {
     if command -v curl >/dev/null 2>&1; then
         FETCH="curl"
@@ -54,8 +52,6 @@ download_file() {
     fi
 }
 
-# -- validation --
-
 validate_extension() {
     VALID=""
     for ext in $KNOWN_EXTENSIONS; do
@@ -71,8 +67,6 @@ validate_extension() {
     fi
 }
 
-# -- pmmux detection --
-
 find_pmmux() {
     if [ -x "${INSTALL_LIB}/pmmux" ]; then
         PMMUX_BIN="${INSTALL_LIB}/pmmux"
@@ -82,8 +76,6 @@ find_pmmux() {
         die "pmmux is not installed. Run install.sh first."
     fi
 }
-
-# -- extension name mapping --
 
 extension_dll_name() {
     case "$1" in
@@ -96,8 +88,6 @@ extension_dll_name() {
         otlp)          printf "Pmmux.Extensions.Otlp.dll" ;;
     esac
 }
-
-# -- version helpers --
 
 get_latest_version() {
     RELEASE_JSON="$(fetch_url "https://api.github.com/repos/${REPO}/releases/latest")" \
@@ -122,12 +112,16 @@ get_installed_extension_version() {
         | head -1)" || true
 }
 
-# -- installation --
-
-check_root() {
-    if [ "$(id -u)" -ne 0 ]; then
-        die "installation requires root privileges. Re-run with sudo."
+SUDO=""
+ensure_sudo() {
+    if [ "$(id -u)" -eq 0 ]; then
+        return
     fi
+    if command -v sudo >/dev/null 2>&1; then
+        SUDO="sudo"
+        return
+    fi
+    die "installation requires root privileges. Re-run with sudo."
 }
 
 install_extension() {
@@ -142,14 +136,12 @@ install_extension() {
         || die "failed to download ${DOWNLOAD_URL}"
 
     printf "extracting ...\n"
-    mkdir -p "$EXTENSIONS_DIR"
-    tar -xzf "${WORK}/${ARCHIVE}" -C "$EXTENSIONS_DIR" \
+    $SUDO mkdir -p "$EXTENSIONS_DIR"
+    $SUDO tar -xzf "${WORK}/${ARCHIVE}" -C "$EXTENSIONS_DIR" \
         || die "failed to extract archive"
 
     printf "extension %s (%s) installed to %s\n" "$EXT_NAME" "$LATEST_VERSION" "$EXTENSIONS_DIR"
 }
-
-# -- main --
 
 main() {
     if [ $# -lt 1 ]; then
@@ -169,7 +161,7 @@ main() {
         exit 0
     fi
 
-    check_root
+    ensure_sudo
     install_extension
 }
 
