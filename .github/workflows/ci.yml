@@ -161,7 +161,7 @@ jobs:
           Pmmux.Extensions.Tls.Abstractions.dll
           Certes.dll
           Newtonsoft.Json.dll
-          BouncyCastle.Cryptography.dll
+          BouncyCastle.Crypto.dll
 
       - uses: actions/upload-artifact@v4
         with:

@@ -57,8 +57,11 @@ internal static class Program
             extensionLoader.Load(configuration, ref extensions);
 
             rootCommand.TreatUnmatchedTokensAsErrors = true;
-            rootCommand.Add(new InstallCommand());
-            rootCommand.Add(new UninstallCommand());
+            if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux())
+            {
+                rootCommand.Add(new InstallCommand());
+                rootCommand.Add(new UninstallCommand());
+            }
             rootCommand.Add(new VersionCommand(extensions));
 
             foreach (var extension in extensions)
