@@ -4,6 +4,8 @@
     <Nullable>enable</Nullable>
     <AssemblyName>$(MSBuildProjectName)</AssemblyName>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <Description>PMMux ACME challenge contracts.</Description>
   </PropertyGroup>
 
   <ItemGroup>

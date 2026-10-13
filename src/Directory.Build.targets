@@ -1,4 +1,19 @@
 <Project>
+  <PropertyGroup Condition="'$(IsPackable)' == 'true'">
+    <Authors>Lenny Kean</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/lennykean/pmmux</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/lennykean/pmmux</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>pmmux;networking;extensions</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsPackable)' == 'true'">
+    <None Update="README.md" Pack="true" PackagePath="/" />
+    <None Include="$(MSBuildThisFileDirectory)../README.md" Link="README.md" Pack="true" PackagePath="/" Condition="!Exists('$(MSBuildProjectDirectory)/README.md')" />
+  </ItemGroup>
+
   <ItemGroup>
     <ExternLinks Include="..\..\doc-links\*.links" Exclude="..\..\doc-links\$(MSBuildProjectName).links" />
   </ItemGroup>

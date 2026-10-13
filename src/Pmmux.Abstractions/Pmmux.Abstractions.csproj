@@ -3,6 +3,8 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>$(MSBuildProjectName)</AssemblyName>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <Description>PMMux extension contracts.</Description>
   </PropertyGroup>
 
   <ItemGroup>

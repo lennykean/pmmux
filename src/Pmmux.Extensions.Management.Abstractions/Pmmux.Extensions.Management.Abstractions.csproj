@@ -3,6 +3,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>$(MSBuildProjectName)</AssemblyName>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <Description>PMMux management API extension contracts.</Description>
   </PropertyGroup>
 
   <ItemGroup>

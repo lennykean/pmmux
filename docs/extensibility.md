@@ -2,6 +2,25 @@
 
 pmmux uses a plugin architecture for extending functionality without modifying the core. Extensions can add new backend protocols, routing strategies, connection negotiators, metric sinks, and more.
 
+## SDK Packages
+
+Reference `Pmmux.Abstractions` to build an extension. Match the package version to the pmmux release you target.
+
+```sh
+dotnet add package Pmmux.Abstractions --version <version>
+```
+
+Additional contracts are available for extensions that integrate with these components:
+
+Package | Use
+-|-
+`Pmmux.Extensions.Tls.Abstractions` | TLS certificate management
+`Pmmux.Extensions.Acme.Abstractions` | ACME DNS challenge providers
+`Pmmux.Extensions.Management.Abstractions` | Management API endpoints
+`Pmmux.Extensions.Management.Models` | Management API request and response types
+
+The management abstractions require .NET 10 and reference the models package automatically. The other packages target .NET Standard 2.1. These are development contracts; install the corresponding runtime extensions separately.
+
 ## Loading Extensions
 
 When pmmux starts, extension DLLs are loaded based on the `--extensions` CLI option or the `extensions` configuration setting. Extensions must have a **public** class implementing [`IExtension`](../src/Pmmux.Abstractions/docs/Pmmux/Abstractions/IExtension/index.md), which pmmux discovers and invokes during startup.
@@ -32,8 +51,9 @@ public class MyExtension : IExtension
 
     public void RegisterCommandOptions(ICommandLineBuilder builder)
     {
-        builder.Add(new Option<string[]>("--deny-ip", "IP addresses to block")
+        builder.Add(new Option<string[]>("--deny-ip")
         {
+            Description = "IP addresses to block",
             AllowMultipleArgumentsPerToken = true
         });
     }
