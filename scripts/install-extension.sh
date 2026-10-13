@@ -4,7 +4,7 @@ set -e
 REPO="lennykean/pmmux"
 INSTALL_LIB="/usr/local/lib/pmmux"
 EXTENSIONS_DIR="${INSTALL_LIB}/extensions"
-KNOWN_EXTENSIONS="http tls bittorrent management acme acme-route53 otlp"
+KNOWN_EXTENSIONS="http tls bittorrent management acme acme-route53 otlp qbittorrent"
 
 cleanup() {
     if [ -n "$TMPDIR_CREATED" ] && [ -d "$TMPDIR_CREATED" ]; then
@@ -86,6 +86,7 @@ extension_dll_name() {
         acme)          printf "Pmmux.Extensions.Acme.dll" ;;
         acme-route53)  printf "Pmmux.Extensions.Acme.Route53.dll" ;;
         otlp)          printf "Pmmux.Extensions.Otlp.dll" ;;
+        qbittorrent)   printf "Pmmux.Extensions.QBittorrent.dll" ;;
     esac
 }
 

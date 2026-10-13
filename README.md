@@ -107,6 +107,7 @@ Extension | Description | Documentation
 **OTLP** | OpenTelemetry metrics export | [README](src/Pmmux.Extensions.Otlp/README.md)
 **ACME** | Automatic TLS certificates via Let's Encrypt | [README](src/Pmmux.Extensions.Acme/README.md)
 **BitTorrent** | BitTorrent protocol detection | [README](src/Pmmux.Extensions.BitTorrent/README.md)
+**qBittorrent** | qBittorrent port synchronization | [README](src/Pmmux.Extensions.QBittorrent/README.md)
 
 ## Service Installation
 

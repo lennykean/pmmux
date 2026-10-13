@@ -203,6 +203,26 @@ jobs:
           name: pmmux-extension-otlp
           path: pmmux-extension-otlp.tar.gz
 
+      - name: Publish qbittorrent
+        run: >
+          dotnet publish src/Pmmux.Extensions.QBittorrent/Pmmux.Extensions.QBittorrent.csproj
+          -c Release /p:Version=${{ steps.version.outputs.version }}
+
+      - name: Package qbittorrent
+        run: >
+          tar -czf pmmux-extension-qbittorrent.tar.gz
+          -C src/Pmmux.Extensions.QBittorrent/bin/Release/net10.0/publish
+          Pmmux.Extensions.QBittorrent.dll
+          Pmmux.Extensions.Management.Abstractions.dll
+          Pmmux.Extensions.Management.Models.dll
+          QBittorrent.Client.dll
+          Newtonsoft.Json.dll
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pmmux-extension-qbittorrent
+          path: pmmux-extension-qbittorrent.tar.gz
+
   pack-sdk:
     needs: test
     runs-on: ubuntu-latest

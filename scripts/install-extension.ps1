@@ -14,7 +14,7 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
 
 $repo = "lennykean/pmmux"
 $knownExtensions = @(
-    "http", "tls", "bittorrent", "management", "acme", "acme-route53", "otlp"
+    "http", "tls", "bittorrent", "management", "acme", "acme-route53", "otlp", "qbittorrent"
 )
 $installDir = Join-Path $env:ProgramFiles "pmmux"
 $extensionsDir = Join-Path $installDir "extensions"
@@ -61,6 +61,7 @@ function Get-InstalledExtensionVersion {
         "acme"          = "Pmmux.Extensions.Acme.dll"
         "acme-route53"  = "Pmmux.Extensions.Acme.Route53.dll"
         "otlp"          = "Pmmux.Extensions.Otlp.dll"
+        "qbittorrent"   = "Pmmux.Extensions.QBittorrent.dll"
     }
     $dllName = $dllMap[$Name]
     if (-not $dllName) {

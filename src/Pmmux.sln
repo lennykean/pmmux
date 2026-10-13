@@ -39,6 +39,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pmmux.Test.Core", "Pmmux.Te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pmmux.Test.Shared", "Pmmux.Test.Shared\Pmmux.Test.Shared.csproj", "{00020AB9-E1DF-4741-BABC-F42C2555C18C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pmmux.Extensions.QBittorrent", "Pmmux.Extensions.QBittorrent\Pmmux.Extensions.QBittorrent.csproj", "{1A1B2E10-8593-4D96-B378-3E43ECB3D43D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pmmux.Test.QBittorrent", "Pmmux.Test.QBittorrent\Pmmux.Test.QBittorrent.csproj", "{E60ADB99-A632-452D-93DA-3FB88A359F22}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -265,6 +269,30 @@ Global
 		{00020AB9-E1DF-4741-BABC-F42C2555C18C}.Release|x64.Build.0 = Release|Any CPU
 		{00020AB9-E1DF-4741-BABC-F42C2555C18C}.Release|x86.ActiveCfg = Release|Any CPU
 		{00020AB9-E1DF-4741-BABC-F42C2555C18C}.Release|x86.Build.0 = Release|Any CPU
+		{1A1B2E10-8593-4D96-B378-3E43ECB3D43D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1A1B2E10-8593-4D96-B378-3E43ECB3D43D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1A1B2E10-8593-4D96-B378-3E43ECB3D43D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{1A1B2E10-8593-4D96-B378-3E43ECB3D43D}.Debug|x64.Build.0 = Debug|Any CPU
+		{1A1B2E10-8593-4D96-B378-3E43ECB3D43D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1A1B2E10-8593-4D96-B378-3E43ECB3D43D}.Debug|x86.Build.0 = Debug|Any CPU
+		{1A1B2E10-8593-4D96-B378-3E43ECB3D43D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1A1B2E10-8593-4D96-B378-3E43ECB3D43D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1A1B2E10-8593-4D96-B378-3E43ECB3D43D}.Release|x64.ActiveCfg = Release|Any CPU
+		{1A1B2E10-8593-4D96-B378-3E43ECB3D43D}.Release|x64.Build.0 = Release|Any CPU
+		{1A1B2E10-8593-4D96-B378-3E43ECB3D43D}.Release|x86.ActiveCfg = Release|Any CPU
+		{1A1B2E10-8593-4D96-B378-3E43ECB3D43D}.Release|x86.Build.0 = Release|Any CPU
+		{E60ADB99-A632-452D-93DA-3FB88A359F22}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E60ADB99-A632-452D-93DA-3FB88A359F22}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E60ADB99-A632-452D-93DA-3FB88A359F22}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E60ADB99-A632-452D-93DA-3FB88A359F22}.Debug|x64.Build.0 = Debug|Any CPU
+		{E60ADB99-A632-452D-93DA-3FB88A359F22}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E60ADB99-A632-452D-93DA-3FB88A359F22}.Debug|x86.Build.0 = Debug|Any CPU
+		{E60ADB99-A632-452D-93DA-3FB88A359F22}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E60ADB99-A632-452D-93DA-3FB88A359F22}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E60ADB99-A632-452D-93DA-3FB88A359F22}.Release|x64.ActiveCfg = Release|Any CPU
+		{E60ADB99-A632-452D-93DA-3FB88A359F22}.Release|x64.Build.0 = Release|Any CPU
+		{E60ADB99-A632-452D-93DA-3FB88A359F22}.Release|x86.ActiveCfg = Release|Any CPU
+		{E60ADB99-A632-452D-93DA-3FB88A359F22}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
